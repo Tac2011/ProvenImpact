@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -40,7 +40,9 @@ export async function middleware(request: NextRequest) {
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/profile';
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((c) => response.cookies.set(c));
+    return response;
   }
 
   return supabaseResponse;

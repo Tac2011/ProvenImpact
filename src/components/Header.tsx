@@ -10,7 +10,7 @@ export async function Header() {
 
   return (
     <header className="flex items-center justify-between border-b px-6 py-4">
-      <Image src="/ProvenImpact.png" alt="Proven Impact" width={160} height={40} priority />
+      <Image src="/ProvenImpact.png" alt="Proven Impact" width={48} height={48} priority />
       {user && <LogoutButton />}
     </header>
   );

@@ -65,10 +65,12 @@ export function ProfileForm({
   const [errors, setErrors] = useState<ReturnType<typeof validateProfile>['errors']>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaved(false);
+    setSaveError(null);
 
     const positions = splitTags(positionsText);
     const disciplines = splitTags(disciplinesText);
@@ -100,7 +102,7 @@ export function ProfileForm({
     setSaving(false);
 
     if (error) {
-      setErrors({ ...result.errors, firstName: error.message });
+      setSaveError(error.message);
       return;
     }
 
@@ -220,6 +222,7 @@ export function ProfileForm({
         {saving ? 'Saving...' : 'Save Profile'}
       </button>
       {saved && <p className="text-sm text-green-700">Profile saved.</p>}
+      {saveError && <p className="text-sm text-red-600">{saveError}</p>}
     </form>
   );
 }
