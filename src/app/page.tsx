@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getUserRole } from '@/lib/roles';
 
 export default async function Home() {
   const supabase = await createClient();
@@ -10,7 +11,8 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect('/profile');
+    const role = await getUserRole(supabase, user.id);
+    redirect(role === 'platform_admin' ? '/admin' : '/profile');
   }
 
   return (

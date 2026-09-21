@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { getUserRole } from '@/lib/roles';
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -40,11 +41,23 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user && isAuthPage) {
+    const role = await getUserRole(supabase, user.id);
     const url = request.nextUrl.clone();
-    url.pathname = '/profile';
+    url.pathname = role === 'platform_admin' ? '/admin' : '/profile';
     const response = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach((c) => response.cookies.set(c));
     return response;
+  }
+
+  if (user && request.nextUrl.pathname.startsWith('/admin')) {
+    const role = await getUserRole(supabase, user.id);
+    if (role !== 'platform_admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/profile';
+      const response = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach((c) => response.cookies.set(c));
+      return response;
+    }
   }
 
   return supabaseResponse;
