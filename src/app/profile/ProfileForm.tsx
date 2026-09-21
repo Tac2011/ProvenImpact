@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { validateProfile, type ProfileFormValues, type SportType } from '@/lib/validateProfile';
+import { SPORTS } from '@/lib/sports';
 
 interface ProfileRow {
   id: string;
@@ -155,11 +156,18 @@ export function ProfileForm({
 
       <label className="flex flex-col gap-1">
         Sport
-        <input
+        <select
           value={values.sport}
           onChange={(e) => setValues({ ...values, sport: e.target.value })}
           className="rounded border px-3 py-2"
-        />
+        >
+          <option value="">Select a sport</option>
+          {SPORTS.map((sport) => (
+            <option key={sport} value={sport}>
+              {sport}
+            </option>
+          ))}
+        </select>
         {errors.sport && <span className="text-sm text-red-600">{errors.sport}</span>}
       </label>
 
