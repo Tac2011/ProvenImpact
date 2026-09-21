@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { COMPETENCIES, COMPETENCY_CATEGORIES } from '@/lib/competencies';
 
@@ -11,6 +12,7 @@ export function AssessmentForm({
   userId: string;
   initialScores: Record<string, number>;
 }) {
+  const router = useRouter();
   const [scores, setScores] = useState<Record<string, number>>(initialScores);
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
@@ -18,7 +20,8 @@ export function AssessmentForm({
   const totalCount = COMPETENCIES.length;
 
   async function handleRate(competencyKey: string, category: string, value: number) {
-    setScores((prev) => ({ ...prev, [competencyKey]: value }));
+    const nextScores = { ...scores, [competencyKey]: value };
+    setScores(nextScores);
     setSavingKey(competencyKey);
 
     const supabase = createClient();
@@ -31,6 +34,13 @@ export function AssessmentForm({
     });
 
     setSavingKey(null);
+
+    if (Object.keys(nextScores).length === COMPETENCIES.length) {
+      setTimeout(() => {
+        router.push('/profile');
+        router.refresh();
+      }, 400);
+    }
   }
 
   return (
