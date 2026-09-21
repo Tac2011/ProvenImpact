@@ -67,6 +67,30 @@ export function ProfileForm({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    setDeleting(true);
+    setDeleteError(null);
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('profiles')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) {
+      setDeleting(false);
+      setDeleteError(error.message);
+      return;
+    }
+
+    await supabase.auth.signOut();
+    router.push('/');
+    router.refresh();
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -113,6 +137,7 @@ export function ProfileForm({
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
         First Name
@@ -212,5 +237,69 @@ export function ProfileForm({
       {saved && <p className="text-sm text-green-700">Profile saved.</p>}
       {saveError && <p className="text-sm text-red-600">{saveError}</p>}
     </form>
+
+    <DeleteAccountSection
+      confirmingDelete={confirmingDelete}
+      setConfirmingDelete={setConfirmingDelete}
+      deleting={deleting}
+      deleteError={deleteError}
+      onDelete={handleDelete}
+    />
+    </>
+  );
+}
+
+function DeleteAccountSection({
+  confirmingDelete,
+  setConfirmingDelete,
+  deleting,
+  deleteError,
+  onDelete,
+}: {
+  confirmingDelete: boolean;
+  setConfirmingDelete: (value: boolean) => void;
+  deleting: boolean;
+  deleteError: string | null;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="mt-10 border-t pt-6">
+      <h2 className="text-sm font-semibold text-gray-700">Danger Zone</h2>
+
+      {!confirmingDelete ? (
+        <button
+          type="button"
+          onClick={() => setConfirmingDelete(true)}
+          className="mt-2 text-sm text-red-600 underline"
+        >
+          Delete Account
+        </button>
+      ) : (
+        <div className="mt-2 flex flex-col gap-3 rounded border border-red-300 bg-red-50 p-4 text-sm">
+          <p>
+            Are you sure you want to delete your account? You won&apos;t be
+            able to undo this yourself.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              className="rounded bg-red-600 px-4 py-2 text-white disabled:opacity-50"
+            >
+              {deleting ? 'Deleting...' : 'Yes, delete my account'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(false)}
+              className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+          {deleteError && <p className="text-red-600">{deleteError}</p>}
+        </div>
+      )}
+    </div>
   );
 }

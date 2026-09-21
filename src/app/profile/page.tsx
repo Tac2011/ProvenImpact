@@ -21,6 +21,18 @@ export default async function ProfilePage() {
     .eq('id', user.id)
     .maybeSingle();
 
+  if (profile?.archived_at) {
+    return (
+      <main className="mx-auto max-w-lg p-8">
+        <h1 className="mb-6 text-2xl font-bold">Account Deleted</h1>
+        <p className="text-gray-600">
+          This account has been deleted. If this was a mistake, contact
+          support to have it reinstated.
+        </p>
+      </main>
+    );
+  }
+
   const { count: ratedCount } = await supabase
     .from('competency_scores')
     .select('*', { count: 'exact', head: true })
