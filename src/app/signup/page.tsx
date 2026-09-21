@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { getUserRole } from '@/lib/roles';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -29,7 +30,8 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      router.push('/profile');
+      const role = await getUserRole(supabase, data.session.user.id);
+      router.push(role === 'platform_admin' ? '/admin' : '/profile');
       router.refresh();
     } else {
       setInfo('Check your email to confirm your account, then log in.');

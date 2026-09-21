@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { getUserRole } from '@/lib/roles';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,16 +18,18 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
 
-    router.push('/profile');
+    const role = await getUserRole(supabase, data.user.id);
+    setLoading(false);
+
+    router.push(role === 'platform_admin' ? '/admin' : '/profile');
     router.refresh();
   }
 
