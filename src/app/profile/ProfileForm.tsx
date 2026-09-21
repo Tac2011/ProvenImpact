@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { validateProfile, type ProfileFormValues, type SportType } from '@/lib/validateProfile';
-import { SPORTS } from '@/lib/sports';
+import { SPORTS, getSportType } from '@/lib/sports';
 
 interface ProfileRow {
   id: string;
@@ -158,41 +158,21 @@ export function ProfileForm({
         Sport
         <select
           value={values.sport}
-          onChange={(e) => setValues({ ...values, sport: e.target.value })}
+          onChange={(e) => {
+            const sport = e.target.value;
+            setValues({ ...values, sport, sportType: getSportType(sport) });
+          }}
           className="rounded border px-3 py-2"
         >
           <option value="">Select a sport</option>
           {SPORTS.map((sport) => (
-            <option key={sport} value={sport}>
-              {sport}
+            <option key={sport.name} value={sport.name}>
+              {sport.name}
             </option>
           ))}
         </select>
         {errors.sport && <span className="text-sm text-red-600">{errors.sport}</span>}
       </label>
-
-      <fieldset className="flex flex-col gap-1">
-        <legend>Sport Type</legend>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="sportType"
-            checked={values.sportType === 'team'}
-            onChange={() => setValues({ ...values, sportType: 'team' })}
-          />
-          Team
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="sportType"
-            checked={values.sportType === 'individual'}
-            onChange={() => setValues({ ...values, sportType: 'individual' })}
-          />
-          Individual
-        </label>
-        {errors.sportType && <span className="text-sm text-red-600">{errors.sportType}</span>}
-      </fieldset>
 
       {values.sportType === 'team' && (
         <label className="flex flex-col gap-1">
