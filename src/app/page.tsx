@@ -23,7 +23,7 @@ export default async function Home() {
 
       <p className="mt-4 max-w-xl text-lg text-gray-600">
         Proven Impact translates what you&apos;ve already demonstrated in
-        competition into evidence employers understand — turning your
+        competition into evidence employers understand, turning your
         athletic career into a career advantage.
       </p>
 
