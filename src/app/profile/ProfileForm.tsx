@@ -54,9 +54,11 @@ function splitTags(text: string): string[] {
 export function ProfileForm({
   userId,
   initialProfile,
+  showDeleteAccount,
 }: {
   userId: string;
   initialProfile: ProfileRow | null;
+  showDeleteAccount: boolean;
 }) {
   const router = useRouter();
   const initialValues = toFormValues(initialProfile);
@@ -247,13 +249,15 @@ export function ProfileForm({
       {saveError && <p className="text-sm text-red-600">{saveError}</p>}
     </form>
 
-    <DeleteAccountSection
-      confirmingDelete={confirmingDelete}
-      setConfirmingDelete={setConfirmingDelete}
-      deleting={deleting}
-      deleteError={deleteError}
-      onDelete={handleDelete}
-    />
+    {showDeleteAccount && (
+      <DeleteAccountSection
+        confirmingDelete={confirmingDelete}
+        setConfirmingDelete={setConfirmingDelete}
+        deleting={deleting}
+        deleteError={deleteError}
+        onDelete={handleDelete}
+      />
+    )}
     </>
   );
 }

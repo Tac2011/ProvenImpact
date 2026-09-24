@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { COMPETENCIES } from '@/lib/competencies';
+import { getUserRole } from '@/lib/roles';
+import { canRequestDeletion } from '@/lib/deletionRequests';
 import { ProfileForm } from './ProfileForm';
 
 export default async function ProfilePage() {
@@ -27,6 +29,7 @@ export default async function ProfilePage() {
     .eq('athlete_id', user.id);
 
   const assessmentComplete = (ratedCount ?? 0) >= COMPETENCIES.length;
+  const role = await getUserRole(supabase, user.id);
 
   return (
     <main className="mx-auto max-w-lg p-8">
@@ -41,7 +44,11 @@ export default async function ProfilePage() {
         </div>
       )}
 
-      <ProfileForm userId={user.id} initialProfile={profile} />
+      <ProfileForm
+        userId={user.id}
+        initialProfile={profile}
+        showDeleteAccount={canRequestDeletion(role)}
+      />
     </main>
   );
 }

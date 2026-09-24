@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { UserRole } from './roles';
 
 export type DeletionStatus = 'pending' | 'approved' | 'restored';
 
@@ -8,6 +9,11 @@ export interface PendingDeletionRow {
   id: string;
   displayName: string;
   requestedAt: string;
+}
+
+// Only athletes can request deletion, so an admin can't lock themselves out of /admin.
+export function canRequestDeletion(role: UserRole): boolean {
+  return role === 'student_athlete';
 }
 
 export function isLockedOut(status: DeletionStatus | null): boolean {

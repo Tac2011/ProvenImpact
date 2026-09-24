@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { displayName, isLockedOut, pendingCountLabel } from './deletionRequests';
+import {
+  canRequestDeletion,
+  displayName,
+  isLockedOut,
+  pendingCountLabel,
+} from './deletionRequests';
+
+describe('canRequestDeletion', () => {
+  it('lets a student athlete request deletion', () => {
+    expect(canRequestDeletion('student_athlete')).toBe(true);
+  });
+
+  it('does not let a platform admin request deletion', () => {
+    expect(canRequestDeletion('platform_admin')).toBe(false);
+  });
+});
 
 describe('isLockedOut', () => {
   it('locks out a pending request', () => {
