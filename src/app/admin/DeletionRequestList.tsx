@@ -14,10 +14,12 @@ export function DeletionRequestList({
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function resolve(id: string, status: 'approved' | 'restored') {
     setBusyId(id);
+    setConfirmingId(null);
     setError(null);
 
     const supabase = createClient();
@@ -52,24 +54,49 @@ export function DeletionRequestList({
                 Requested {new Date(row.requestedAt).toLocaleDateString()}
               </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => resolve(row.id, 'approved')}
-                disabled={busyId !== null}
-                className="rounded bg-red-600 px-3 py-1 text-white disabled:opacity-50"
-              >
-                Approve
-              </button>
-              <button
-                type="button"
-                onClick={() => resolve(row.id, 'restored')}
-                disabled={busyId !== null}
-                className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Restore
-              </button>
-            </div>
+            {confirmingId === row.id ? (
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-red-700">
+                  This locks them out for good. Undoing it needs a database edit.
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => resolve(row.id, 'approved')}
+                    disabled={busyId !== null}
+                    className="rounded bg-red-600 px-3 py-1 text-white disabled:opacity-50"
+                  >
+                    Yes, approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingId(null)}
+                    className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingId(row.id)}
+                  disabled={busyId !== null}
+                  className="rounded bg-red-600 px-3 py-1 text-white disabled:opacity-50"
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resolve(row.id, 'restored')}
+                  disabled={busyId !== null}
+                  className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Restore
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
