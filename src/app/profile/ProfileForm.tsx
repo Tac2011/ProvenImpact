@@ -76,10 +76,19 @@ export function ProfileForm({
     setDeleteError(null);
 
     const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.email) {
+      setDeleting(false);
+      setDeleteError('Could not confirm your account. Please log in again.');
+      return;
+    }
+
     const { error } = await supabase
-      .from('profiles')
-      .update({ archived_at: new Date().toISOString() })
-      .eq('id', userId);
+      .from('deletion_requests')
+      .insert({ user_id: userId, email: user.email });
 
     if (error) {
       setDeleting(false);
@@ -272,13 +281,14 @@ function DeleteAccountSection({
           onClick={() => setConfirmingDelete(true)}
           className="mt-2 text-sm text-red-600 underline"
         >
-          Delete Account
+          Request Account Deletion
         </button>
       ) : (
         <div className="mt-2 flex flex-col gap-3 rounded border border-red-300 bg-red-50 p-4 text-sm">
           <p>
-            Are you sure you want to delete your account? You won&apos;t be
-            able to undo this yourself.
+            Are you sure? An Admin will process your request. You&apos;ll be
+            signed out right away and won&apos;t be able to log back in unless
+            an Admin restores your account.
           </p>
           <div className="flex gap-2">
             <button
@@ -287,7 +297,7 @@ function DeleteAccountSection({
               disabled={deleting}
               className="rounded bg-red-600 px-4 py-2 text-white disabled:opacity-50"
             >
-              {deleting ? 'Deleting...' : 'Yes, delete my account'}
+              {deleting ? 'Submitting...' : 'Yes, request deletion'}
             </button>
             <button
               type="button"
