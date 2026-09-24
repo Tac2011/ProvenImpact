@@ -77,8 +77,9 @@ logo and name stay visible.
 | `/admin/manage` | Heading "Admin". The pending deletion banner and list (moved unchanged from today's `/admin`), then a "Your admin account" section with the details `/admin` shows today: name, admin type, organization, date added. |
 
 All four sit under `/admin`, so the existing proxy rule (non-admins are
-redirected to `/profile`) already protects them. Each page also keeps its
-own server-side admin check, matching today's `/admin` page.
+redirected to `/profile`) already protects them. The pages that show data
+(`/admin` and `/admin/manage`) also keep their own server-side admin
+check, matching today's `/admin` page.
 
 ## Dashboard Data
 
