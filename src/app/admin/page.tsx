@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getUserRoleInfo, type UserRole } from '@/lib/roles';
+import { displayName, pendingCountLabel, type PendingDeletionRow } from '@/lib/deletionRequests';
+import { DeletionRequestList } from './DeletionRequestList';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   platform_admin: 'Main Admin',
@@ -31,9 +33,43 @@ export default async function AdminPage() {
     ? new Date(info.createdAt).toLocaleDateString()
     : 'Not set';
 
+  const { data: requests } = await supabase
+    .from('deletion_requests')
+    .select('id, user_id, email, requested_at')
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: true });
+
+  const pending = requests ?? [];
+  const userIds = pending.map((r) => r.user_id);
+
+  // No foreign key links deletion_requests to profiles, so names come from a second query.
+  const { data: profiles } =
+    userIds.length > 0
+      ? await supabase.from('profiles').select('id, first_name, last_name').in('id', userIds)
+      : { data: [] };
+
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  const rows: PendingDeletionRow[] = pending.map((r) => ({
+    id: r.id,
+    displayName: displayName(profileById.get(r.user_id) ?? null, r.email),
+    requestedAt: r.requested_at,
+  }));
+
+  const countLabel = pendingCountLabel(rows.length);
+
   return (
     <main className="mx-auto max-w-lg p-8">
       <h1 className="text-2xl font-bold">Platform Admin</h1>
+
+      {countLabel && (
+        <section className="mt-6">
+          <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm font-medium">
+            {countLabel}
+          </div>
+          <DeletionRequestList adminId={user.id} rows={rows} />
+        </section>
+      )}
 
       <dl className="mt-6 flex flex-col gap-4 text-sm">
         <div>
