@@ -55,7 +55,7 @@
 - Modify: `supabase/schema.sql` (header date line, and a new section at the end)
 
 **Interfaces:**
-- Produces: tables `rubric_versions`, `rubric_competencies`, `experiences`, `experience_evidence`, `experience_runs`, with the columns and policies below. Rubric version 0 (draft) with competencies `confidence` and `discipline`.
+- Produces: tables `rubric_versions`, `rubric_competencies`, `experiences`, `experience_evidence`, `experience_runs`, with the columns and policies below. Rubric version 0 (draft) with competencies `discipline` and `resilience`.
 
 - [ ] **Step 1: Write the migration**
 
@@ -236,15 +236,15 @@ insert into rubric_competencies
 values
 (
   (select id from rubric_versions where version = 0),
-  'confidence',
-  'Confidence',
-  'Trusts their own ability to take on hard goals and see them through, and acts on that belief without needing constant reassurance.',
-  'Set a specific, challenging goal on their own (not assigned by a coach). Kept at it over a long stretch: a full season or more. Has a measurable result to show for it. Kept going through a real setback.',
-  'Followed through on a demanding program someone else set, with visible improvement. Or: set their own goal, but over a shorter period or without a clear result.',
-  'Saying they feel confident, or being told they are good. A one-time result with no effort behind it, like scoring 30 points once.',
+  'resilience',
+  'Resilience',
+  'Recovers from setbacks and keeps performing, adjusting the plan instead of giving up when things go wrong.',
+  'Faced a real setback (an injury, losing a starting spot, a failure) and took specific steps to come back. Stayed with it for weeks or months. Has a clear outcome: returned to play, won the spot back, or reached a measurable result.',
+  'Faced a real setback and kept going, but the comeback was short, guided step by step by someone else, or has no clear outcome yet.',
+  'Saying they are resilient or never give up. Bouncing back from one bad game. A hard situation described without anything they did about it.',
   '[
-    {"story": "I lifted 4-5 times a week on my own and raised my squat, bench, and deadlift at least 10% every year from freshman to junior year, even after a shoulder injury sophomore year.", "rating": "strong", "why": "Self-set goal, three years, measured every year, pushed through an injury."},
-    {"story": "I completed every workout our strength coach assigned during preseason.", "rating": "moderate", "why": "Real follow-through, but the goal and plan came from the coach, and it was one preseason."}
+    {"story": "I tore my ACL junior year. I did rehab six days a week for nine months, kept going to team film sessions, and was starting again by the second game of senior year.", "rating": "strong", "why": "Serious setback, self-driven rehab for nine months, clear return."},
+    {"story": "After I got benched midseason, I stayed after practice a few times to work on my defense and got some minutes back by the end of the year.", "rating": "moderate", "why": "A real response to a setback, but short and loosely described, with a partial outcome."}
   ]'
 ),
 (
@@ -285,7 +285,7 @@ from rubric_versions v join rubric_competencies c on c.rubric_version_id = v.id
 order by c.key;
 ```
 
-Expected: two rows, `0 | null | confidence` and `0 | null | discipline`.
+Expected: two rows, `0 | null | discipline` and `0 | null | resilience`.
 
 - [ ] **Step 6: Commit**
 
