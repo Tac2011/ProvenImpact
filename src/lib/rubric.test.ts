@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { competencyLabel, pickCurrentRubric, toRubric, type RubricCompetency } from './rubric';
+import {
+  competencyLabel,
+  hasUsableRubric,
+  pickCurrentRubric,
+  toRubric,
+  type RubricCompetency,
+  type RubricVersionRow,
+} from './rubric';
 
 const draft0 = { id: 'v0', version: 0, published_at: null };
 const pub1 = { id: 'v1', version: 1, published_at: '2026-10-05T00:00:00Z' };
@@ -57,5 +64,25 @@ describe('competencyLabel', () => {
 
   it('makes an unknown key readable', () => {
     expect(competencyLabel('time_management', [confidence])).toBe('Time Management');
+  });
+});
+
+describe('hasUsableRubric', () => {
+  const withCount = (v: RubricVersionRow, count: number) => ({ ...v, rubric_competencies: [{ count }] });
+
+  it('is true when the current version has competencies', () => {
+    expect(hasUsableRubric([withCount(pub1, 4)], false)).toBe(true);
+  });
+
+  it('is false when the current version has none loaded yet', () => {
+    expect(hasUsableRubric([withCount(pub1, 4), withCount(pub2, 0)], false)).toBe(false);
+  });
+
+  it('is false on the live site when only drafts exist', () => {
+    expect(hasUsableRubric([withCount(draft0, 2)], false)).toBe(false);
+  });
+
+  it('counts a draft when drafts are allowed', () => {
+    expect(hasUsableRubric([withCount(draft0, 2)], true)).toBe(true);
   });
 });

@@ -8,6 +8,7 @@ import {
   athleteTexts,
   isOverDailyLimit,
   keepFollowupQuestions,
+  retryDecision,
   runWindowStart,
   validateAnswers,
   validateMapping,
@@ -28,9 +29,11 @@ interface ExperienceRow extends ExperienceAnswers {
   id: string;
   followups: Followup[];
   status: ExperienceStatus;
+  updated_at: string;
 }
 
-const EXPERIENCE_COLUMNS = 'id, title, what_you_did, frequency, result, obstacle, followups, status';
+const EXPERIENCE_COLUMNS =
+  'id, title, what_you_did, frequency, result, obstacle, followups, status, updated_at';
 
 const SIGNED_OUT = 'Please log in again.';
 const NOT_FOUND = 'We could not find that experience.';
@@ -38,6 +41,7 @@ const SAVE_ERROR = 'We could not save that. Please try again.';
 const NO_RUBRIC = 'This feature is not available yet.';
 const FIX_ANSWERS = 'Please fix the answers marked below.';
 const LIMIT_REACHED = "You've reached today's limit of 20 tries. Please try again tomorrow.";
+const STILL_READING = 'This experience is still being read. Wait a minute, then refresh the page.';
 
 async function currentUserId(supabase: Supabase): Promise<string | null> {
   const {
@@ -257,9 +261,21 @@ export async function submitFollowups(id: string, answers: unknown[]): Promise<A
     return run;
   }
 
+  // Save the answers and leave needs_followup in one update. If another request got here
+  // first (a reload, then Skip), the update matches no row and this one stops, so it can't
+  // overwrite the answers already saved.
   const followups = applyFollowupAnswers(experience.followups, Array.isArray(answers) ? answers : []);
-  if (!(await saveExperience(supabase, id, { followups }))) {
+  const { data: claimed, error } = await supabase
+    .from('experiences')
+    .update({ followups, status: 'draft', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', 'needs_followup')
+    .select('id');
+  if (error) {
     return { ok: false, error: SAVE_ERROR };
+  }
+  if (!claimed || claimed.length === 0) {
+    return { ok: true, id };
   }
 
   await processExperience(supabase, run.rubric, { ...experience, followups }, false);
@@ -277,13 +293,33 @@ export async function retryExperience(id: string): Promise<ActionResult> {
   if (!experience) {
     return { ok: false, error: NOT_FOUND };
   }
-  if (experience.status !== 'draft' && experience.status !== 'failed') {
+  const decision = retryDecision(experience.status, experience.updated_at, new Date());
+  if (decision === 'done') {
     return { ok: true, id };
+  }
+  if (decision === 'busy') {
+    return { ok: false, error: STILL_READING };
   }
 
   const run = await startRun(supabase, userId);
   if (!run.ok) {
     return run;
+  }
+
+  // Claim the experience: only the request that still sees the exact status and
+  // updated_at it loaded can move it on, so two clicks never start two runs.
+  const { data: claimed, error } = await supabase
+    .from('experiences')
+    .update({ status: 'draft', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', experience.status)
+    .eq('updated_at', experience.updated_at)
+    .select('id');
+  if (error) {
+    return { ok: false, error: SAVE_ERROR };
+  }
+  if (!claimed || claimed.length === 0) {
+    return { ok: true, id };
   }
 
   // Follow-ups are asked only once per experience.

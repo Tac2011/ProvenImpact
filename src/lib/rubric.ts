@@ -31,10 +31,10 @@ export interface Rubric {
 }
 
 // Highest published version wins. Drafts count only when allowDraft is on (local development).
-export function pickCurrentRubric(
-  versions: RubricVersionRow[],
+export function pickCurrentRubric<T extends RubricVersionRow>(
+  versions: T[],
   allowDraft: boolean
-): RubricVersionRow | null {
+): T | null {
   const usable = versions.filter((v) => allowDraft || v.published_at !== null);
   if (usable.length === 0) {
     return null;
@@ -51,6 +51,16 @@ export function toRubric(
     return null;
   }
   return { id: version.id, version: version.version, competencies };
+}
+
+export interface RubricVersionWithCount extends RubricVersionRow {
+  rubric_competencies: { count: number }[];
+}
+
+// Same rule as getCurrentRubric, from version rows that carry a competency count.
+export function hasUsableRubric(versions: RubricVersionWithCount[], allowDraft: boolean): boolean {
+  const current = pickCurrentRubric(versions, allowDraft);
+  return (current?.rubric_competencies[0]?.count ?? 0) > 0;
 }
 
 // Shows the rubric's name for a competency, or a readable form of the key when the
@@ -116,4 +126,12 @@ export async function getRubricByVersion(
   }
   const row = data as RubricVersionRow;
   return toRubric(row, await getRubricCompetencies(supabase, row.id));
+}
+
+// The header asks this on every page, so it uses one query and skips the rubric text.
+export async function rubricIsAvailable(supabase: SupabaseClient): Promise<boolean> {
+  const { data } = await supabase
+    .from('rubric_versions')
+    .select('id, version, published_at, rubric_competencies(count)');
+  return hasUsableRubric((data ?? []) as RubricVersionWithCount[], allowDraftRubric());
 }

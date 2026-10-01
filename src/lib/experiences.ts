@@ -134,9 +134,10 @@ export function normalizeForMatch(text: string): string {
     .trim();
 }
 
-// Claude sometimes wraps a quote in quote marks or adds a closing period. Strip those edges.
+// Claude sometimes wraps a quote in quote marks, adds a closing period, or shortens it
+// with an ellipsis. Strip those edges, straight or curly.
 function trimQuoteEdges(text: string): string {
-  return text.replace(/^["'.,;:!?\s]+|["'.,;:!?\s]+$/g, '');
+  return text.replace(/^["'“”‘’….,;:!?\s]+|["'“”‘’….,;:!?\s]+$/g, '');
 }
 
 // A quote counts only if it is at least two words and appears in one of the athlete's answers.
@@ -224,7 +225,7 @@ export function validateMapping(
     byKey.set(item.competency_key, {
       competency_key: item.competency_key,
       strength: item.strength,
-      quote: item.quote.trim(),
+      quote: trimQuoteEdges(item.quote),
       reason: item.reason.trim(),
     });
   }
@@ -240,6 +241,30 @@ export function validateMapping(
 // The daily limit uses a rolling 24 hours, so it works the same in every time zone.
 export function runWindowStart(now: Date): string {
   return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+}
+
+// A run lasts at most two 30-second Claude calls plus saves, so a draft untouched for
+// two minutes can't still be in progress.
+export const RUN_STALE_AFTER_MS = 2 * 60 * 1000;
+
+export function staleRunCutoff(now: Date): string {
+  return new Date(now.getTime() - RUN_STALE_AFTER_MS).toISOString();
+}
+
+// Whether Try again should start a run. A failed experience always can; a draft only
+// once its last run is too old to still be in progress.
+export function retryDecision(
+  status: ExperienceStatus,
+  updatedAt: string,
+  now: Date
+): 'run' | 'busy' | 'done' {
+  if (status === 'failed') {
+    return 'run';
+  }
+  if (status === 'draft') {
+    return new Date(updatedAt).getTime() < now.getTime() - RUN_STALE_AFTER_MS ? 'run' : 'busy';
+  }
+  return 'done';
 }
 
 export function isOverDailyLimit(runsInWindow: number): boolean {

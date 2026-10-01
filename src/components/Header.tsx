@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { getUserRoleInfo } from '@/lib/roles';
 import { headerDisplayName, homeHrefFor, navItemsFor } from '@/lib/navigation';
-import { getCurrentRubric } from '@/lib/rubric';
+import { rubricIsAvailable } from '@/lib/rubric';
 import { HeaderNav } from './HeaderNav';
 
 export async function Header() {
@@ -32,7 +32,7 @@ export async function Header() {
   }
 
   const showExperiences =
-    info.role !== 'platform_admin' && (await getCurrentRubric(supabase)) !== null;
+    info.role !== 'platform_admin' && (await rubricIsAvailable(supabase));
 
   return (
     <HeaderNav

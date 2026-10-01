@@ -8,6 +8,7 @@ import {
   runWindowStart,
   validateAnswers,
   validateMapping,
+  retryDecision,
   type ExperienceAnswers,
 } from './experiences';
 
@@ -221,5 +222,41 @@ describe('daily limit', () => {
   it('allows the 20th run and blocks the 21st', () => {
     expect(isOverDailyLimit(19)).toBe(false);
     expect(isOverDailyLimit(20)).toBe(true);
+  });
+});
+
+describe('quotes Claude decorated', () => {
+  it('accepts a quote Claude shortened with an ellipsis', () => {
+    expect(isAthleteQuote('\u2026lifted weights on my own schedule', texts)).toBe(true);
+  });
+
+  it('stores the quote without the quote marks and period Claude added', () => {
+    const result = validateMapping(
+      output([{ ...discipline, quote: '\u201C4-5 times a week, freshman through junior year.\u201D' }]),
+      keys,
+      texts
+    );
+    expect(result?.evidence[0].quote).toBe('4-5 times a week, freshman through junior year');
+  });
+});
+
+describe('retryDecision', () => {
+  const now = new Date('2026-10-01T18:00:00Z');
+
+  it('always retries a failed experience', () => {
+    expect(retryDecision('failed', '2026-10-01T17:59:59Z', now)).toBe('run');
+  });
+
+  it('treats a draft saved in the last two minutes as still being read', () => {
+    expect(retryDecision('draft', '2026-10-01T17:59:00+00:00', now)).toBe('busy');
+  });
+
+  it('retries a draft whose last run is more than two minutes old', () => {
+    expect(retryDecision('draft', '2026-10-01T17:57:59+00:00', now)).toBe('run');
+  });
+
+  it('does nothing once the experience has moved on', () => {
+    expect(retryDecision('mapped', '2026-10-01T17:00:00Z', now)).toBe('done');
+    expect(retryDecision('needs_followup', '2026-10-01T17:00:00Z', now)).toBe('done');
   });
 });
