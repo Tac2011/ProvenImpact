@@ -15,16 +15,24 @@ const ADMIN_ITEMS: NavItem[] = [
 ];
 
 // Corporate and University roles have no screens yet, so they share the athlete menu.
-const ATHLETE_ITEMS: NavItem[] = [
-  { label: 'My Profile', href: '/profile' },
-  { label: 'Self-Assessment', href: '/assessment' },
-];
+const PROFILE_ITEM: NavItem = { label: 'My Profile', href: '/profile' };
+const EXPERIENCES_ITEM: NavItem = { label: 'My Experiences', href: '/experiences' };
+const ASSESSMENT_ITEM: NavItem = { label: 'Self-Assessment', href: '/assessment' };
 
-export function navItemsFor(role: UserRole | null): NavItem[] {
+// My Experiences only appears once a rubric is published.
+export function navItemsFor(
+  role: UserRole | null,
+  options: { experiences?: boolean } = {}
+): NavItem[] {
   if (role === null) {
     return [];
   }
-  return role === 'platform_admin' ? ADMIN_ITEMS : ATHLETE_ITEMS;
+  if (role === 'platform_admin') {
+    return ADMIN_ITEMS;
+  }
+  return options.experiences
+    ? [PROFILE_ITEM, EXPERIENCES_ITEM, ASSESSMENT_ITEM]
+    : [PROFILE_ITEM, ASSESSMENT_ITEM];
 }
 
 export function homeHrefFor(role: UserRole | null): string {

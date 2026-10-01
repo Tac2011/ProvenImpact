@@ -122,3 +122,30 @@ describe('formatStat', () => {
     expect(formatStat(undefined)).toBe('-');
   });
 });
+describe('navItemsFor with experiences', () => {
+  it('puts My Experiences between My Profile and Self-Assessment', () => {
+    expect(navItemsFor('student_athlete', { experiences: true }).map((i) => i.href)).toEqual([
+      '/profile',
+      '/experiences',
+      '/assessment',
+    ]);
+  });
+
+  it('leaves it out when no rubric is published', () => {
+    expect(navItemsFor('student_athlete', { experiences: false }).map((i) => i.href)).toEqual([
+      '/profile',
+      '/assessment',
+    ]);
+  });
+
+  it('never adds it to the admin menu', () => {
+    expect(navItemsFor('platform_admin', { experiences: true }).map((i) => i.href)).not.toContain(
+      '/experiences'
+    );
+  });
+
+  it('underlines My Experiences on an experience page', () => {
+    const items = navItemsFor('student_athlete', { experiences: true });
+    expect(activeHref('/experiences/abc', items)).toBe('/experiences');
+  });
+});
