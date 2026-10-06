@@ -4,9 +4,6 @@ import type { ExperienceAnswers } from '@/lib/experiences';
 import { requireExperiencesAccess } from '../../access';
 import { ExperienceForm } from '../../ExperienceForm';
 
-// Saving runs the mapping again, which can take up to 30 seconds.
-export const maxDuration = 60;
-
 export default async function EditExperiencePage({
   params,
 }: {

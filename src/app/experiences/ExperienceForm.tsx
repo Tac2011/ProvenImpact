@@ -91,6 +91,7 @@ export function ExperienceForm({
 
       <p className="text-xs text-gray-500">
         Your answers are sent to Claude, an AI from Anthropic, to find the strengths they show.
+        Anthropic doesn&rsquo;t use them to train its models.
       </p>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

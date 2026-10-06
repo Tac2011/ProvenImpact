@@ -2,9 +2,6 @@ import Link from 'next/link';
 import { requireExperiencesAccess } from '../access';
 import { ExperienceForm } from '../ExperienceForm';
 
-// The form's server action can make two Claude calls of up to 30 seconds each.
-export const maxDuration = 60;
-
 export default async function NewExperiencePage() {
   await requireExperiencesAccess();
 

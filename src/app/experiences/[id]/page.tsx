@@ -8,9 +8,6 @@ import { ResultCard, type EvidenceView } from './ResultCard';
 import { DeleteExperience } from './DeleteExperience';
 import { RetryPanel } from './RetryPanel';
 
-// Continue and Try again run server actions that can make two Claude calls.
-export const maxDuration = 60;
-
 interface DetailRow {
   id: string;
   title: string;
