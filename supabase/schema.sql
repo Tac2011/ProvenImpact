@@ -1,5 +1,5 @@
 -- Full schema for the public tables, matching the live Supabase database
--- as of 2026-10-01. Changes after the initial setup live in migrations/.
+-- as of 2026-10-05. Changes after the initial setup live in migrations/.
 
 -- Roles ---------------------------------------------------------------
 
@@ -246,6 +246,11 @@ create policy "Athletes can update own experiences"
   on experiences for update
   using (auth.uid() = athlete_id)
   with check (auth.uid() = athlete_id);
+
+-- Evidence goes with the experience (on delete cascade); the run log is untouched.
+create policy "Athletes can delete own experiences"
+  on experiences for delete
+  using (auth.uid() = athlete_id);
 
 create policy "Platform admins can view all experiences"
   on experiences for select

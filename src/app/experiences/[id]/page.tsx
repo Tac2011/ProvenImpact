@@ -5,6 +5,7 @@ import type { ExperienceStatus, Followup, Strength } from '@/lib/experiences';
 import { requireExperiencesAccess } from '../access';
 import { FollowupForm } from './FollowupForm';
 import { ResultCard, type EvidenceView } from './ResultCard';
+import { DeleteExperience } from './DeleteExperience';
 import { RetryPanel } from './RetryPanel';
 
 // Continue and Try again run server actions that can make two Claude calls.
@@ -96,6 +97,8 @@ export default async function ExperiencePage({ params }: { params: Promise<{ id:
           interviewLine={experience.interview_line ?? ''}
         />
       )}
+
+      <DeleteExperience experienceId={experience.id} />
     </main>
   );
 }
