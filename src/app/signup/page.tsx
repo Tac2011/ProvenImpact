@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getUserRole } from '@/lib/roles';
+import { confirmRedirectUrl } from '@/lib/authLinks';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -20,7 +21,11 @@ export default function SignupPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: confirmRedirectUrl(window.location.origin, 'email') },
+    });
 
     setLoading(false);
 
@@ -34,7 +39,9 @@ export default function SignupPage() {
       router.push(role === 'platform_admin' ? '/admin' : '/profile');
       router.refresh();
     } else {
-      setInfo('Check your email to confirm your account, then log in.');
+      setInfo(
+        `We sent a link to ${email}. Click it to finish creating your account. If it isn't in your inbox in a few minutes, check spam.`
+      );
     }
   }
 
