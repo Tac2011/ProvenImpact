@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getUserRole } from '@/lib/roles';
 import { getOpenDeletionStatus, isLockedOut } from '@/lib/deletionRequests';
+import { isAuthPage, isPublicPath } from '@/lib/authLinks';
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -37,11 +38,9 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/signup');
-
-  const isPublicPage = request.nextUrl.pathname === '/' || isAuthPage;
+  const pathname = request.nextUrl.pathname;
+  const onAuthPage = isAuthPage(pathname);
+  const isPublicPage = isPublicPath(pathname);
 
   if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();
@@ -58,7 +57,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (user && isAuthPage) {
+  if (user && onAuthPage) {
     const role = await getUserRole(supabase, user.id);
     return redirectTo(role === 'platform_admin' ? '/admin' : '/profile');
   }
