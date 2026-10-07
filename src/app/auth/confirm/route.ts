@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     : await supabase.auth.exchangeCodeForSession(code!);
 
   if (error || !data.user) {
+    console.error('Email link failed', error?.code ?? error?.name, error?.message);
     redirect(BAD_LINK);
   }
 
