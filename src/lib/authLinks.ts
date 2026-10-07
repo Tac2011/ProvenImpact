@@ -35,8 +35,10 @@ export function destinationAfterConfirm(type: ConfirmType, role: UserRole): stri
   return type === 'recovery' ? '/reset-password' : homeForRole(role);
 }
 
-export function confirmRedirectUrl(origin: string): string {
-  return `${origin}${CONFIRM_PATH}`;
+// The type rides in the return address, because Supabase's default email link
+// brings back only a code and doesn't say whether it was a sign-up or a reset.
+export function confirmRedirectUrl(origin: string, type: ConfirmType): string {
+  return `${origin}${CONFIRM_PATH}?type=${type}`;
 }
 
 export function newPasswordError(password: string, confirm: string): string | null {

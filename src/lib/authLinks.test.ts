@@ -77,10 +77,12 @@ describe('destinationAfterConfirm', () => {
 });
 
 describe('confirmRedirectUrl', () => {
-  it('points back at the site the request came from', () => {
-    expect(confirmRedirectUrl('http://localhost:3000')).toBe('http://localhost:3000/auth/confirm');
-    expect(confirmRedirectUrl('https://proven-impact.vercel.app')).toBe(
-      'https://proven-impact.vercel.app/auth/confirm'
+  it('points back at the site the request came from, carrying the link type', () => {
+    expect(confirmRedirectUrl('http://localhost:3000', 'email')).toBe(
+      'http://localhost:3000/auth/confirm?type=email'
+    );
+    expect(confirmRedirectUrl('https://proven-impact.vercel.app', 'recovery')).toBe(
+      'https://proven-impact.vercel.app/auth/confirm?type=recovery'
     );
   });
 });

@@ -6,19 +6,25 @@ import { destinationAfterConfirm, parseConfirmType } from '@/lib/authLinks';
 
 const BAD_LINK = '/login?error=link';
 
-// Sign-up confirmation and password reset emails link here. Checking the
-// one-time token signs the person in (it sets the session cookies), so the
-// link works on any device, not only the browser where they started.
+// Sign-up confirmation and password reset emails link here, and checking the
+// link signs the person in (it sets the session cookies). Two kinds of link:
+// - token_hash: from our own email templates. Works on any device.
+// - code: from Supabase's default templates, which are locked until we have our
+//   own email service. Works only in the browser that asked for the email.
 export async function GET(request: NextRequest) {
-  const tokenHash = request.nextUrl.searchParams.get('token_hash');
-  const type = parseConfirmType(request.nextUrl.searchParams.get('type'));
+  const params = request.nextUrl.searchParams;
+  const type = parseConfirmType(params.get('type'));
+  const tokenHash = params.get('token_hash');
+  const code = params.get('code');
 
-  if (!tokenHash || !type) {
+  if (!type || (!tokenHash && !code)) {
     redirect(BAD_LINK);
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+  const { data, error } = tokenHash
+    ? await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
+    : await supabase.auth.exchangeCodeForSession(code!);
 
   if (error || !data.user) {
     redirect(BAD_LINK);

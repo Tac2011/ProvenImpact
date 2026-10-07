@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
 
     const supabase = createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: confirmRedirectUrl(window.location.origin),
+      redirectTo: confirmRedirectUrl(window.location.origin, 'recovery'),
     });
 
     // Supabase doesn't say whether the email has an account, and neither do we.

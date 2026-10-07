@@ -129,6 +129,15 @@ Existing accounts were created while confirmation was off and are already marked
   7. Log in before clicking the link: the not-confirmed message and Resend work.
   8. Open the sign-up link on a phone: it works on a different device.
 
+## Revision (2026-10-06, during the build)
+
+Supabase locks the email templates while a project uses its built-in sender, so the template edits can't be made until we have our own email service. Decided with Todd:
+
+- The return address carries the type: `{origin}/auth/confirm?type=email` or `?type=recovery`.
+- `/auth/confirm` accepts either a `token_hash` (our templates, later) or a `code` (Supabase's default templates, now). With a `code`, the link works only in the browser that asked for the email; that's acceptable for testing.
+- Redirect URLs in Supabase must allow the query string: `http://localhost:3000/auth/confirm**` and `https://proven-impact.vercel.app/auth/confirm**`.
+- The template edits move to the go-live checklist, with the email service. Their link becomes `{{ .RedirectTo }}&token_hash={{ .TokenHash }}` (the type is already in the address).
+
 ## Out of Scope
 
 - A custom domain and email service, and branded email design. Go-live checklist.
