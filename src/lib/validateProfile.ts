@@ -3,10 +3,8 @@ export type SportType = 'team' | 'individual' | '';
 export interface ProfileFormValues {
   firstName: string;
   lastName: string;
-  college: string;
   sport: string;
   sportType: SportType;
-  degree: string;
   positions: string[];
   disciplines: string[];
 }
@@ -21,9 +19,7 @@ export function validateProfile(values: ProfileFormValues): ValidationResult {
 
   if (!values.firstName.trim()) errors.firstName = 'First name is required';
   if (!values.lastName.trim()) errors.lastName = 'Last name is required';
-  if (!values.college.trim()) errors.college = 'College is required';
   if (!values.sport.trim()) errors.sport = 'Sport is required';
-  if (!values.degree.trim()) errors.degree = 'Degree is required';
 
   if (values.sportType !== 'team' && values.sportType !== 'individual') {
     errors.sportType = 'Select a sport type';

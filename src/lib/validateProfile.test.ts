@@ -5,10 +5,8 @@ function baseValues(overrides: Partial<ProfileFormValues> = {}): ProfileFormValu
   return {
     firstName: 'Jordan',
     lastName: 'Smith',
-    college: 'State University',
     sport: 'Soccer',
     sportType: 'team',
-    degree: 'B.S. Kinesiology',
     positions: ['Midfielder'],
     disciplines: [],
     ...overrides,
@@ -53,5 +51,11 @@ describe('validateProfile', () => {
     );
     expect(result.valid).toBe(false);
     expect(result.errors.disciplines).toBeDefined();
+  });
+
+  it('no longer checks college or degree (they moved to education)', () => {
+    const result = validateProfile(baseValues());
+    expect(Object.keys(result.errors)).toEqual([]);
+    expect('college' in baseValues()).toBe(false);
   });
 });
