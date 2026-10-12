@@ -1,22 +1,40 @@
 import { describe, expect, it } from 'vitest';
 import {
+  athleteSummary,
   buildExperienceReport,
+  degreeText,
   experienceStatusLabel,
+  fieldText,
   formatReportDate,
+  graduationText,
+  groupNotListed,
+  schoolText,
+  type NotListedRow,
   type ReportAthlete,
   type ReportExperienceRow,
   type ReportLabel,
 } from './reports';
 
-function athlete(id: string, first: string, last: string): ReportAthlete {
+function athlete(id: string, first: string, last: string, overrides: Partial<ReportAthlete> = {}): ReportAthlete {
   return {
     id,
     first_name: first,
     last_name: last,
-    college: 'UNO',
-    degree: 'Business',
-    sport: 'Golf',
+    college: null,
+    degree: null,
+    sport: 'Football',
     created_at: '2026-10-06T15:00:00Z',
+    college_name: 'University of Nebraska at Omaha',
+    college_city: 'Omaha',
+    college_state: 'NE',
+    college_other: null,
+    degree_type: 'BS',
+    degree_other: null,
+    primary_field_title: 'Computer Science',
+    primary_field_other: null,
+    grad_month: 5,
+    grad_year: 2027,
+    ...overrides,
   };
 }
 
@@ -163,5 +181,78 @@ describe('buildExperienceReport', () => {
       (e) => e.strengths[0]
     );
     expect(strengths).toEqual(['Time Management (Strong)', 'Time Management (Strong)']);
+  });
+});
+
+describe('athlete education text', () => {
+  it('describes a picked school, degree, field, and graduation', () => {
+    const a = athlete('a1', 'Todd', 'Campbell');
+    expect(schoolText(a)).toBe('University of Nebraska at Omaha');
+    expect(degreeText(a)).toBe('BS');
+    expect(fieldText(a)).toBe('Computer Science');
+    expect(graduationText(a)).toBe('May 2027');
+    expect(athleteSummary(a)).toBe(
+      'University of Nebraska at Omaha · BS, Computer Science · Graduating May 2027 · Football'
+    );
+  });
+
+  it('shows "not listed" answers as typed', () => {
+    const a = athlete('a1', 'Todd', 'Campbell', {
+      college_name: null,
+      college_city: null,
+      college_state: null,
+      college_other: 'Hometown CC',
+      degree_type: 'OTHER',
+      degree_other: 'BSN',
+      primary_field_title: null,
+      primary_field_other: 'Esports Management',
+    });
+    expect(athleteSummary(a)).toBe('Hometown CC · BSN, Esports Management · Graduating May 2027 · Football');
+  });
+
+  it('falls back to the old typed text for athletes who have not picked yet', () => {
+    const a = athlete('a1', 'Todd', 'Campbell', {
+      college: 'UNO',
+      degree: 'BS - Computer Science',
+      college_name: null,
+      college_city: null,
+      college_state: null,
+      degree_type: null,
+      primary_field_title: null,
+      grad_month: null,
+      grad_year: null,
+    });
+    expect(schoolText(a)).toBe('UNO (not yet picked)');
+    expect(degreeText(a)).toBe('BS - Computer Science (not yet picked)');
+    expect(graduationText(a)).toBe('');
+    expect(athleteSummary(a)).toBe('UNO (not yet picked) · BS - Computer Science (not yet picked) · Football');
+  });
+});
+
+describe('groupNotListed', () => {
+  function row(kind: NotListedRow['kind'], answer: string, id: string, last: string): NotListedRow {
+    return { kind, answer, athlete_id: id, first_name: 'A', last_name: last };
+  }
+
+  it('groups answers ignoring case and extra spaces, schools first, most athletes first', () => {
+    const groups = groupNotListed([
+      row('Field of study', 'Esports', 'a1', 'Smith'),
+      row('School', 'Iowa Western CC', 'a2', 'Doe'),
+      row('School', ' iowa  western cc ', 'a3', 'Adams'),
+      row('School', 'Hometown CC', 'a4', 'Brown'),
+    ]);
+    expect(groups).toEqual([
+      { kind: 'School', answer: 'Iowa Western CC', athletes: ['Adams, A', 'Doe, A'] },
+      { kind: 'School', answer: 'Hometown CC', athletes: ['Brown, A'] },
+      { kind: 'Field of study', answer: 'Esports', athletes: ['Smith, A'] },
+    ]);
+  });
+
+  it('counts an athlete once per answer, even if typed for primary and secondary', () => {
+    const groups = groupNotListed([
+      row('Field of study', 'Esports', 'a1', 'Smith'),
+      row('Field of study', 'esports', 'a1', 'Smith'),
+    ]);
+    expect(groups[0].athletes).toEqual(['Smith, A']);
   });
 });

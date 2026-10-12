@@ -1,5 +1,6 @@
 import { competencyLabel } from './rubric';
 import type { ExperienceStatus, Strength } from './experiences';
+import { degreeShort, formatMonthYear, type DegreeType } from './education';
 
 // The experience report shows results the athlete has seen, confirmed or not.
 export const REPORTED_STATUSES: ExperienceStatus[] = ['mapped', 'confirmed'];
@@ -8,10 +9,20 @@ export interface ReportAthlete {
   id: string;
   first_name: string;
   last_name: string;
-  college: string;
-  degree: string;
+  college: string | null; // old free text, shown until the athlete picks from the list
+  degree: string | null; // old free text
   sport: string;
   created_at: string;
+  college_name: string | null;
+  college_city: string | null;
+  college_state: string | null;
+  college_other: string | null;
+  degree_type: DegreeType | null; // null when the athlete has no current school yet
+  degree_other: string | null;
+  primary_field_title: string | null;
+  primary_field_other: string | null;
+  grad_month: number | null;
+  grad_year: number | null;
 }
 
 export interface ReportExperienceRow {
@@ -98,4 +109,72 @@ export function buildExperienceReport(
         strengths: strengthsFor(row, labels),
       })),
   }));
+}
+
+const NOT_PICKED = ' (not yet picked)';
+
+export function schoolText(a: ReportAthlete): string {
+  if (a.degree_type !== null) return a.college_name ?? a.college_other ?? '';
+  return a.college ? `${a.college}${NOT_PICKED}` : '';
+}
+
+export function degreeText(a: ReportAthlete): string {
+  if (a.degree_type !== null) return degreeShort(a.degree_type, a.degree_other);
+  return a.degree ? `${a.degree}${NOT_PICKED}` : '';
+}
+
+export function fieldText(a: ReportAthlete): string {
+  return a.primary_field_title ?? a.primary_field_other ?? '';
+}
+
+export function graduationText(a: ReportAthlete): string {
+  return a.grad_month !== null && a.grad_year !== null ? formatMonthYear(a.grad_month, a.grad_year) : '';
+}
+
+export function athleteSummary(a: ReportAthlete): string {
+  const degreeAndField = [degreeText(a), fieldText(a)].filter(Boolean).join(', ');
+  const graduation = graduationText(a);
+  return [schoolText(a), degreeAndField, graduation && `Graduating ${graduation}`, a.sport]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+export interface NotListedRow {
+  kind: 'School' | 'Field of study';
+  answer: string;
+  athlete_id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface NotListedGroup {
+  kind: 'School' | 'Field of study';
+  answer: string;
+  athletes: string[];
+}
+
+export function groupNotListed(rows: NotListedRow[]): NotListedGroup[] {
+  const groups = new Map<string, { kind: NotListedRow['kind']; answer: string; athletes: Map<string, string> }>();
+
+  for (const row of rows) {
+    const answer = row.answer.trim().replace(/\s+/g, ' ');
+    if (!answer) continue;
+    const key = `${row.kind}|${answer.toLowerCase()}`;
+    const group = groups.get(key) ?? { kind: row.kind, answer, athletes: new Map<string, string>() };
+    group.athletes.set(row.athlete_id, `${row.last_name}, ${row.first_name}`);
+    groups.set(key, group);
+  }
+
+  return [...groups.values()]
+    .map((g) => ({
+      kind: g.kind,
+      answer: g.answer,
+      athletes: [...g.athletes.values()].sort((a, b) => a.localeCompare(b)),
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.kind === 'School') - Number(a.kind === 'School') ||
+        b.athletes.length - a.athletes.length ||
+        a.answer.localeCompare(b.answer)
+    );
 }
