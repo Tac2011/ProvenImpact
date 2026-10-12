@@ -28,7 +28,7 @@ Decided with Todd during brainstorming:
 | School not on the list? | "My school isn't listed" plus a text box. Nobody gets stuck. |
 | Degree | Split into degree type (fixed list) and field of study (standard list). |
 | Fields of study | A primary (required) and a secondary (optional). Not labeled major or minor; if the secondary is a minor, so be it. One degree type covers both. |
-| Field list | The federal CIP list at the 4-digit level, minus families that aren't college majors. 418 entries. "Not listed" fallback. |
+| Field list | The federal CIP list at the 4-digit level, minus families that aren't college majors. 414 entries. "Not listed" fallback. |
 | Graduation | Month and year, not a full date. Two dropdowns, not the browser's month picker (Firefox and desktop Safari show a plain text box). |
 | Transfers | Keep every school attended, with one current. Each school has its own degree, fields, and dates. |
 | Audit | Every insert, edit, and delete of education data is recorded automatically: who, when, before, after. |
@@ -87,7 +87,7 @@ From CIPCode2020.csv:
 - The trailing period on each title is removed. Excel-style `="..."`
   wrapping on codes is removed.
 
-Result on 2026-10-12: 418 fields of study.
+Result on 2026-10-12: 414 fields of study.
 
 ## Data
 

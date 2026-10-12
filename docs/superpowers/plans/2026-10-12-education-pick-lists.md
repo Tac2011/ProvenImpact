@@ -1083,7 +1083,7 @@ KS: 47 colleges
 IA: 44 colleges
 ND: 17 colleges
 SD: 12 colleges
-Colleges: 141. Fields of study: 418. Wrote supabase/reference/reference-data-v1.sql.
+Colleges: 141. Fields of study: 414. Wrote supabase/reference/reference-data-v1.sql.
 ```
 and no "Nicknames for schools not in the list" warning.
 
@@ -1109,7 +1109,7 @@ select count(*) from fields_of_study;
 select id, edition, retrieved_on from data_sources;
 ```
 
-Expected: IA 44, KS 47, ND 17, NE 21, SD 12; 418; three source rows.
+Expected: IA 44, KS 47, ND 17, NE 21, SD 12; 414; three source rows.
 
 ---
 

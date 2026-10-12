@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "rubric-check": "tsx --env-file=.env.local scripts/rubric-check.ts"
+    "rubric-check": "tsx --env-file=.env.local scripts/rubric-check.ts",
+    "build-reference-data": "tsx scripts/build-reference-data.ts",
+    "education-check": "tsx --env-file=.env.local scripts/education-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
