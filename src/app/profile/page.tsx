@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { COMPETENCIES } from '@/lib/competencies';
 import { getUserRole } from '@/lib/roles';
 import { canRequestDeletion } from '@/lib/deletionRequests';
+import type { College, EducationRow, FieldOfStudy } from '@/lib/education';
 import { ProfileForm } from './ProfileForm';
 
 export default async function ProfilePage() {
@@ -31,6 +32,28 @@ export default async function ProfilePage() {
   const assessmentComplete = (ratedCount ?? 0) >= COMPETENCIES.length;
   const role = await getUserRole(supabase, user.id);
 
+  const [collegesResult, fieldsResult, educationResult] = await Promise.all([
+    supabase.from('colleges').select('id, name, city, state, nicknames').order('name'),
+    supabase.from('fields_of_study').select('code, title').order('title'),
+    supabase
+      .from('athlete_education')
+      .select('*')
+      .eq('athlete_id', user.id)
+      .order('end_year', { ascending: false })
+      .order('end_month', { ascending: false }),
+  ]);
+
+  const loadError = collegesResult.error ?? fieldsResult.error ?? educationResult.error;
+  if (loadError) {
+    console.error('Profile: could not load education data', loadError);
+  }
+
+  const educationRows = (educationResult.data ?? []) as EducationRow[];
+  // Central time, so the year menus roll over at local midnight on New Year's.
+  const thisYear = Number(
+    new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'America/Chicago' }).format(new Date())
+  );
+
   return (
     <main className="mx-auto max-w-lg p-8">
       <h1 className="mb-6 text-2xl font-bold">Your Profile</h1>
@@ -48,6 +71,12 @@ export default async function ProfilePage() {
         userId={user.id}
         initialProfile={profile}
         showDeleteAccount={canRequestDeletion(role)}
+        colleges={(collegesResult.data ?? []) as College[]}
+        fields={(fieldsResult.data ?? []) as FieldOfStudy[]}
+        currentEducation={educationRows.find((r) => r.is_current) ?? null}
+        previousEducation={educationRows.filter((r) => !r.is_current)}
+        listsError={loadError !== null}
+        thisYear={thisYear}
       />
     </main>
   );
