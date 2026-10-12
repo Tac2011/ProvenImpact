@@ -18,6 +18,7 @@ import {
 import { collegeOptions, fieldOptions } from '@/lib/pickerSearch';
 import { SPORTS, getSportType } from '@/lib/sports';
 import { CurrentSchool, type Transfer } from './CurrentSchool';
+import { PreviousSchools } from './PreviousSchools';
 
 interface ProfileRow {
   id: string;
@@ -67,6 +68,7 @@ export function ProfileForm({
   colleges,
   fields,
   currentEducation,
+  previousEducation,
   listsError,
   thisYear,
 }: {
@@ -292,6 +294,17 @@ export function ProfileForm({
       {saved && <p className="text-sm text-green-700">Profile saved.</p>}
       {saveError && <p className="text-sm text-red-600">{saveError}</p>}
     </form>
+
+    {currentEducation && !listsError && (
+      <PreviousSchools
+        athleteId={userId}
+        rows={previousEducation}
+        collegesById={collegesById}
+        colleges={collegePicks}
+        fields={fieldPicks}
+        thisYear={thisYear}
+      />
+    )}
 
     {showDeleteAccount && (
       <DeleteAccountSection
