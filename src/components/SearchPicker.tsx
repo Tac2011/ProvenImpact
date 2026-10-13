@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { optionText, searchOptions, type PickerOption } from '@/lib/pickerSearch';
 import { EMPTY_PICK, type PickValue } from '@/lib/education';
 
@@ -44,6 +44,13 @@ export function SearchPicker({
     ],
     [options, query, notListedLabel]
   );
+
+  // The list shows about 7 rows; keep the arrow-key highlight in view as it moves.
+  useEffect(() => {
+    if (open) {
+      document.getElementById(`${baseId}-option-${active}`)?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [active, open, baseId]);
 
   function choose(id: string) {
     onChange(id === NOT_LISTED ? { id: null, other: value.other ?? '' } : { id, other: null });
