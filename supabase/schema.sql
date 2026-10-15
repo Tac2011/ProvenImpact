@@ -779,3 +779,41 @@ create policy "Athletes can update own story ideas"
   on story_ideas for update
   using (auth.uid() = athlete_id)
   with check (auth.uid() = athlete_id);
+
+create function apply_bio_import(import_id uuid, honors jsonb)
+returns void
+language plpgsql security invoker
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  imp bio_imports%rowtype;
+begin
+  if uid is null then
+    raise exception 'Not signed in';
+  end if;
+
+  select * into imp from bio_imports
+    where id = import_id and athlete_id = uid
+    for update;
+  if not found then
+    raise exception 'Bio import not found';
+  end if;
+  if imp.applied_at is not null then
+    return;
+  end if;
+
+  insert into athlete_honors (athlete_id, title, years, source)
+    select uid, h->>'title', nullif(h->>'years', ''), 'bio'
+    from jsonb_array_elements(coalesce(honors, '[]'::jsonb)) as h;
+
+  insert into story_ideas (athlete_id, bio_import_id, prompt, source)
+    select uid, import_id, i->>'prompt', i->>'source'
+    from jsonb_array_elements(coalesce(imp.extracted->'ideas', '[]'::jsonb)) as i;
+
+  update bio_imports set applied_at = now() where id = import_id;
+end;
+$$;
+
+revoke execute on function apply_bio_import(uuid, jsonb) from public, anon;
+grant execute on function apply_bio_import(uuid, jsonb) to authenticated;

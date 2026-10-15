@@ -82,9 +82,9 @@ export async function readBio(input: unknown): Promise<ReadBioResult> {
   return { ok: true, importId: data.id, bio: checked.bio };
 }
 
-// Runs after the profile saves. Story ideas come from the stored import, never from the
-// browser. The import is claimed first so a double click can't add ideas twice; the
-// claim is undone if an insert fails, so Save can retry.
+// Runs after the profile saves. apply_bio_import does the rest in one transaction: it
+// adds the kept honors and the stored import's story ideas (never ideas from the
+// browser) and marks the import applied, or changes nothing, so Save can retry.
 export async function applyBioImport(importId: unknown, keptHonors: unknown): Promise<ApplyBioResult> {
   const supabase = await createClient();
   const {
@@ -97,68 +97,24 @@ export async function applyBioImport(importId: unknown, keptHonors: unknown): Pr
     return { ok: false, error: APPLY_FAILED };
   }
 
-  const { data: row } = await supabase
-    .from('bio_imports')
-    .select('id, extracted, applied_at')
-    .eq('id', importId)
-    .eq('athlete_id', user.id)
-    .maybeSingle();
-  if (!row) {
-    return { ok: false, error: APPLY_FAILED };
-  }
-  if (row.applied_at) {
-    return { ok: true };
-  }
-
-  const { data: claimed, error: claimError } = await supabase
-    .from('bio_imports')
-    .update({ applied_at: new Date().toISOString() })
-    .eq('id', importId)
-    .is('applied_at', null)
-    .select('id');
-  if (claimError) {
-    return { ok: false, error: APPLY_FAILED };
-  }
-  if (!claimed || claimed.length === 0) {
-    return { ok: true };
-  }
-
-  const release = async (): Promise<ApplyBioResult> => {
-    await supabase.from('bio_imports').update({ applied_at: null }).eq('id', importId);
-    return { ok: false, error: APPLY_FAILED };
-  };
-
   const { data: existing, error: existingError } = await supabase
     .from('athlete_honors')
     .select('title')
     .eq('athlete_id', user.id);
   if (existingError) {
-    return release();
+    return { ok: false, error: APPLY_FAILED };
   }
 
-  // Checked against the saved list, so a retry after a partial failure adds no repeats.
+  // Kept honors come from the browser, so they're cleaned again and checked against the saved list.
   const honors = cleanHonors(
     Array.isArray(keptHonors) ? keptHonors : [],
     (existing ?? []).map((h) => h.title as string)
   );
-  if (honors.length > 0) {
-    const { error } = await supabase
-      .from('athlete_honors')
-      .insert(honors.map((h) => ({ athlete_id: user.id, title: h.title, years: h.years || null, source: 'bio' })));
-    if (error) {
-      return release();
-    }
-  }
 
-  const ideas = (row.extracted as CheckedBio).ideas ?? [];
-  if (ideas.length > 0) {
-    const { error } = await supabase
-      .from('story_ideas')
-      .insert(ideas.map((idea) => ({ athlete_id: user.id, bio_import_id: importId, prompt: idea.prompt, source: idea.source })));
-    if (error) {
-      return release();
-    }
+  const { error } = await supabase.rpc('apply_bio_import', { import_id: importId, honors });
+  if (error) {
+    console.error('applyBioImport failed', error.message);
+    return { ok: false, error: APPLY_FAILED };
   }
-
   return { ok: true };
 }

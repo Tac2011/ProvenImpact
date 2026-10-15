@@ -125,6 +125,7 @@ export function ProfileForm({
   const [keptHonors, setKeptHonors] = useState<boolean[]>([]);
   // Previous schools from the bio stay offered until added or skipped, even after Save.
   const [schoolSuggestions, setSchoolSuggestions] = useState<BioSchool[]>([]);
+  const [bioReading, setBioReading] = useState(false);
 
   const collegePicks = useMemo(() => collegeOptions(colleges), [colleges]);
   const fieldPicks = useMemo(() => fieldOptions(fields), [fields]);
@@ -297,13 +298,15 @@ export function ProfileForm({
 
   return (
     <>
-    <BioImport welcome={welcome} onRead={handleBioRead} />
+    <BioImport welcome={welcome} onRead={handleBioRead} onBusyChange={setBioReading} />
     {bio && (
       <p className="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
         We filled in what we found in your bio. Check everything, then click Save Profile.
       </p>
     )}
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit}>
+      {/* Locked while a bio is being read, so the result can't overwrite new typing. */}
+      <fieldset disabled={bioReading} className="flex flex-col gap-4 disabled:opacity-60">
       <label className="flex flex-col gap-1">
         <span>First Name{fromBioTag('firstName')}</span>
         <input
@@ -458,6 +461,7 @@ export function ProfileForm({
       </button>
       {saved && <p className="text-sm text-green-700">Profile saved.</p>}
       {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+      </fieldset>
     </form>
 
     {currentEducation && !listsError && (
@@ -469,7 +473,7 @@ export function ProfileForm({
         fields={fieldPicks}
         thisYear={thisYear}
         suggestions={schoolSuggestions}
-        onSuggestionDone={(index) => setSchoolSuggestions(schoolSuggestions.filter((_, j) => j !== index))}
+        onSuggestionDone={(index) => setSchoolSuggestions((current) => current.filter((_, j) => j !== index))}
       />
     )}
 

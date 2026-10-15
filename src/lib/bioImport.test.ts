@@ -40,6 +40,14 @@ describe('matchPick', () => {
     expect(matchPick(colleges, 'University of Colorado')).toBeNull();
     expect(matchPick(colleges, '  ')).toBeNull();
   });
+
+  it('leaves it blank when two schools share the exact name', () => {
+    const twins = [
+      { id: '10', label: 'Westminster College', detail: 'Salt Lake City, UT', nicknames: [] },
+      { id: '11', label: 'Westminster College', detail: 'New Wilmington, PA', nicknames: [] },
+    ];
+    expect(matchPick(twins, 'Westminster College')).toBeNull();
+  });
 });
 
 describe('cleanHonors', () => {

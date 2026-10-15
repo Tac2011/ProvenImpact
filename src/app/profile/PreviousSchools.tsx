@@ -134,6 +134,8 @@ export function PreviousSchools({
       {suggestions.map((school, i) => (
         <div key={i} className="flex flex-col gap-1 rounded border border-blue-200 bg-blue-50 p-3 text-sm">
           <span>From your bio: {schoolSummary(school)}</span>
+          {/* Hidden while a school is being edited, so the list can't shift under the open form. */}
+          {editing === null && (
           <span className="flex gap-3">
             <button
               type="button"
@@ -149,6 +151,7 @@ export function PreviousSchools({
               Skip
             </button>
           </span>
+          )}
         </div>
       ))}
       {rows.length === 0 && editing !== 'new' && (

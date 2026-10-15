@@ -118,13 +118,14 @@ export function checkPaste(input: unknown): { ok: true; text: string } | { ok: f
   return { ok: true, text };
 }
 
-// Fills a pick only when it's clear: an exact name match, or the only search result.
+// Fills a pick only when it's clear: the one exact name match, or the only search result.
+// Two schools with the same name (Westminster College in UT and PA) is not clear.
 export function matchPick(options: PickerOption[], text: string): PickValue | null {
   const query = normalize(text);
   if (!query) return null;
   const results = searchOptions(options, text, options.length);
-  const exact = results.find((option) => normalize(option.label) === query);
-  const pick = exact ?? (results.length === 1 ? results[0] : null);
+  const exact = results.filter((option) => normalize(option.label) === query);
+  const pick = exact.length > 0 ? (exact.length === 1 ? exact[0] : null) : results.length === 1 ? results[0] : null;
   return pick ? { id: pick.id, other: null } : null;
 }
 
