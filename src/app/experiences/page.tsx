@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { competencyLabel } from '@/lib/rubric';
 import { STATUS_LABELS, displayTitle, type ExperienceStatus } from '@/lib/experiences';
 import { requireExperiencesAccess } from './access';
+import { StoryIdeas } from './StoryIdeas';
 
 interface ListRow {
   id: string;
@@ -24,6 +25,14 @@ export default async function ExperiencesPage() {
     (a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress')
   );
 
+  const { data: ideaRows } = await supabase
+    .from('story_ideas')
+    .select('id, prompt')
+    .eq('athlete_id', user.id)
+    .eq('status', 'open')
+    .order('created_at', { ascending: false });
+  const ideas = (ideaRows ?? []) as { id: string; prompt: string }[];
+
   return (
     <main className="mx-auto max-w-2xl p-8">
       <div className="flex items-center justify-between gap-4">
@@ -39,6 +48,8 @@ export default async function ExperiencesPage() {
         Describe something real you did, like a training routine, a comeback, or learning
         something hard. We&apos;ll show you which strengths it proves, in your own words.
       </p>
+
+      <StoryIdeas ideas={ideas} />
 
       {experiences.length === 0 ? (
         <p className="mt-8 text-sm text-gray-600">No experiences yet. Add your first one to get started.</p>

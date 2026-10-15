@@ -158,8 +158,26 @@ async function processExperience(
   });
 }
 
+// Links the story idea the athlete started from. A failure here doesn't undo the save;
+// the idea just stays open.
+async function markIdeaUsed(
+  supabase: Supabase,
+  userId: string,
+  ideaId: string | null,
+  experienceId: string
+): Promise<void> {
+  if (typeof ideaId !== 'string' || !ideaId) return;
+  await supabase
+    .from('story_ideas')
+    .update({ status: 'used', experience_id: experienceId })
+    .eq('id', ideaId)
+    .eq('athlete_id', userId)
+    .eq('status', 'open');
+}
+
 export async function createExperience(
-  input: Partial<Record<AnswerKey, unknown>>
+  input: Partial<Record<AnswerKey, unknown>>,
+  ideaId: string | null = null
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const userId = await currentUserId(supabase);
@@ -188,6 +206,7 @@ export async function createExperience(
   }
 
   const experience = data as ExperienceRow;
+  await markIdeaUsed(supabase, userId, ideaId, experience.id);
   await processExperience(supabase, run.rubric, experience, true);
   return { ok: true, id: experience.id };
 }
@@ -233,7 +252,8 @@ export async function updateExperience(
 // daily try. With an id, it only updates an experience that is still in progress.
 export async function saveForLater(
   id: string | null,
-  input: Partial<Record<AnswerKey, unknown>>
+  input: Partial<Record<AnswerKey, unknown>>,
+  ideaId: string | null = null
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const userId = await currentUserId(supabase);
@@ -257,6 +277,7 @@ export async function saveForLater(
     if (error || !data) {
       return { ok: false, error: SAVE_ERROR };
     }
+    await markIdeaUsed(supabase, userId, ideaId, data.id);
     return { ok: true, id: data.id };
   }
 

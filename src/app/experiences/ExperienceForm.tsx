@@ -22,10 +22,12 @@ export function ExperienceForm({
   experienceId,
   initialAnswers,
   inProgress = false,
+  ideaId,
 }: {
   experienceId?: string;
   initialAnswers?: ExperienceAnswers;
   inProgress?: boolean;
+  ideaId?: string;
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<ExperienceAnswers>(initialAnswers ?? EMPTY);
@@ -68,13 +70,13 @@ export function ExperienceForm({
     event.preventDefault();
     run(
       'reading',
-      () => (experienceId ? updateExperience(experienceId, answers) : createExperience(answers)),
+      () => (experienceId ? updateExperience(experienceId, answers) : createExperience(answers, ideaId ?? null)),
       (id) => `/experiences/${id}`
     );
   }
 
   function handleSaveForLater() {
-    run('saving', () => saveForLater(experienceId ?? null, answers), () => '/experiences');
+    run('saving', () => saveForLater(experienceId ?? null, answers, ideaId ?? null), () => '/experiences');
   }
 
   return (
