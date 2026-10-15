@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getUserRoleInfo } from '@/lib/roles';
 import { headerDisplayName, homeHrefFor, navItemsFor } from '@/lib/navigation';
 import { rubricIsAvailable } from '@/lib/rubric';
+import { topJobsAvailable } from '@/lib/topJobs/tables';
 import { HeaderNav } from './HeaderNav';
 
 export async function Header() {
@@ -33,11 +34,12 @@ export async function Header() {
 
   const showExperiences =
     info.role !== 'platform_admin' && (await rubricIsAvailable(supabase));
+  const showTopJobs = showExperiences && (await topJobsAvailable(supabase));
 
   return (
     <HeaderNav
       homeHref={homeHrefFor(info.role)}
-      items={navItemsFor(info.role, { experiences: showExperiences })}
+      items={navItemsFor(info.role, { experiences: showExperiences, topJobs: showTopJobs })}
       displayName={headerDisplayName({
         adminName: info.name,
         firstName: profile?.first_name ?? null,
