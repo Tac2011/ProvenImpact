@@ -15,7 +15,7 @@ import {
 } from './education';
 import { normalize, searchOptions, type PickerOption } from './pickerSearch';
 import { SPORTS } from './sports';
-import type { SportType } from './validateProfile';
+import type { ProfileFormValues, SportType } from './validateProfile';
 
 export const BIO_MAX_LENGTH = 15_000;
 export const HONOR_TITLE_MAX = 200;
@@ -259,4 +259,166 @@ export function possibleFamilyDetails(text: string): string[] {
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
     .filter((sentence) => FAMILY_WORDS.test(sentence));
+}
+
+// --- Merging into the profile form -------------------------------------------------
+
+export type BioField =
+  | 'firstName'
+  | 'lastName'
+  | 'sport'
+  | 'positions'
+  | 'disciplines'
+  | 'college'
+  | 'degree'
+  | 'primaryField'
+  | 'start'
+  | 'end';
+
+export const BIO_FIELD_LABELS: Record<BioField, string> = {
+  firstName: 'first name',
+  lastName: 'last name',
+  sport: 'sport',
+  positions: 'positions',
+  disciplines: 'disciplines',
+  college: 'school',
+  degree: 'degree',
+  primaryField: 'field of study',
+  start: 'start date',
+  end: 'expected graduation',
+};
+
+const ALL_BIO_FIELDS = Object.keys(BIO_FIELD_LABELS) as BioField[];
+export const EDUCATION_BIO_FIELDS: BioField[] = ['college', 'degree', 'primaryField', 'start', 'end'];
+
+export interface FormState {
+  profile: ProfileFormValues;
+  education: EducationFormValues;
+}
+
+function pickKey(pick: PickValue): string {
+  if (pick.id !== null) return pick.id;
+  return pick.other !== null ? `other:${normalize(pick.other)}` : '';
+}
+
+function dateKey(month: number | null, year: number | null): string {
+  return year === null ? '' : `${month ?? ''}/${year}`;
+}
+
+// A comparable value per field. '' means empty.
+function fieldKey(state: FormState, field: BioField): string {
+  const { profile, education } = state;
+  switch (field) {
+    case 'firstName':
+    case 'lastName':
+    case 'sport':
+      return normalize(profile[field]);
+    case 'positions':
+    case 'disciplines':
+      return profile[field].map(normalize).join('|');
+    case 'college':
+      return pickKey(education.college);
+    case 'degree':
+      return education.degreeType ? `${education.degreeType}|${normalize(education.degreeOther)}` : '';
+    case 'primaryField':
+      return pickKey(education.primaryField);
+    case 'start':
+      return dateKey(education.startMonth, education.startYear);
+    case 'end':
+      return dateKey(education.endMonth, education.endYear);
+  }
+}
+
+// The bio's values in form shape. sportText is only for hints, so it's left out.
+function bioState(bio: CheckedBio): FormState {
+  const { firstName, lastName, sport, sportType, positions, disciplines } = bio.profile;
+  return {
+    profile: { firstName, lastName, sport, sportType, positions, disciplines },
+    education: bio.current?.values ?? emptyEducation(),
+  };
+}
+
+export function takeBioValue(state: FormState, bio: CheckedBio, field: BioField): FormState {
+  const { profile, education } = state;
+  const from = bioState(bio);
+  switch (field) {
+    case 'firstName':
+      return { profile: { ...profile, firstName: from.profile.firstName }, education };
+    case 'lastName':
+      return { profile: { ...profile, lastName: from.profile.lastName }, education };
+    case 'sport':
+      return { profile: { ...profile, sport: from.profile.sport, sportType: from.profile.sportType }, education };
+    case 'positions':
+      return { profile: { ...profile, positions: from.profile.positions }, education };
+    case 'disciplines':
+      return { profile: { ...profile, disciplines: from.profile.disciplines }, education };
+    case 'college':
+      return { profile, education: { ...education, college: from.education.college } };
+    case 'degree':
+      return {
+        profile,
+        education: { ...education, degreeType: from.education.degreeType, degreeOther: from.education.degreeOther },
+      };
+    case 'primaryField':
+      return { profile, education: { ...education, primaryField: from.education.primaryField } };
+    case 'start':
+      return {
+        profile,
+        education: { ...education, startMonth: from.education.startMonth, startYear: from.education.startYear },
+      };
+    case 'end':
+      return {
+        profile,
+        education: { ...education, endMonth: from.education.endMonth, endYear: from.education.endYear },
+      };
+  }
+}
+
+// Fills empty fields from the bio. A field that already has a different value keeps
+// it and is listed in `differences`, so the form can offer "Use this".
+export function mergeBio(
+  state: FormState,
+  bio: CheckedBio
+): FormState & { filled: BioField[]; differences: BioField[] } {
+  const from = bioState(bio);
+  let next = state;
+  const filled: BioField[] = [];
+  const differences: BioField[] = [];
+
+  for (const field of ALL_BIO_FIELDS) {
+    const theirs = fieldKey(from, field);
+    const mine = fieldKey(next, field);
+    if (!theirs || mine === theirs) continue;
+    if (mine) {
+      differences.push(field);
+    } else {
+      next = takeBioValue(next, bio, field);
+      filled.push(field);
+    }
+  }
+  return { ...next, filled, differences };
+}
+
+export function bioFieldText(bio: CheckedBio, field: BioField): string {
+  const { profile } = bio;
+  const school = bio.current;
+  switch (field) {
+    case 'firstName':
+    case 'lastName':
+    case 'sport':
+      return profile[field];
+    case 'positions':
+    case 'disciplines':
+      return profile[field].join(', ');
+    case 'college':
+      return school?.collegeText ?? '';
+    case 'degree':
+      return school?.values.degreeType ? degreeShort(school.values.degreeType, school.values.degreeOther) : '';
+    case 'primaryField':
+      return school?.fieldText ?? '';
+    case 'start':
+      return school ? dateText(school.values.startMonth, school.values.startYear) : '';
+    case 'end':
+      return school ? dateText(school.values.endMonth, school.values.endYear) : '';
+  }
 }
