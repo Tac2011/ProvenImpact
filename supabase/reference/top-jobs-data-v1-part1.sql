@@ -2,7 +2,9 @@
 
 -- Run all parts in order in the Supabase SQL editor, after 2026-10-15-top-jobs.sql.
 
--- Safe to rerun: existing rows are skipped.
+-- Safe to rerun. While tables v1 is a draft, a rerun updates its maps, open list, and job needs;
+
+-- once published, nothing in v1 changes (load changes as version 2). Other rows are skipped.
 
 insert into data_sources (id, publisher, dataset, edition, url, retrieved_on, checksum) values ('onet-31.0', 'National Center for O*NET Development', 'O*NET Database', '31.0', 'https://www.onetcenter.org/database.html', '2026-10-15', 'c6ce3c72bf0e4849') on conflict (id) do nothing;
 

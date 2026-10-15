@@ -68,3 +68,10 @@ export function basedOnLine(summary: InputsSummary): string {
   const list = parts.length === 2 ? `${parts[0]} and ${parts[1]}` : `${parts.slice(0, -1).join(', ')}, and ${parts.at(-1)}`;
   return `Based on ${list}.`;
 }
+
+// The results to compare against for New badges: the newest row before the latest with
+// different inputs. A Try again row repeats the latest inputs, so it is skipped.
+export function previousResult<T extends { fingerprint: string }>(rows: T[]): T | undefined {
+  const [latest, ...older] = rows;
+  return latest ? older.find((row) => row.fingerprint !== latest.fingerprint) : undefined;
+}

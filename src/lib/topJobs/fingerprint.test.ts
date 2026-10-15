@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { basedOnLine, changedLine, fingerprint, type FingerprintInput } from './fingerprint';
+import { basedOnLine, changedLine, fingerprint, previousResult, type FingerprintInput } from './fingerprint';
+
+describe('previousResult', () => {
+  it('skips Try again rows with the same inputs, so New badges survive a retry', () => {
+    const rows = [
+      { id: 'retry', fingerprint: 'f2' },
+      { id: 'update', fingerprint: 'f2' },
+      { id: 'before', fingerprint: 'f1' },
+    ];
+    expect(previousResult(rows)?.id).toBe('before');
+  });
+
+  it('has no previous result for a first run, or when every row has the same inputs', () => {
+    expect(previousResult([{ id: 'only', fingerprint: 'f1' }])).toBeUndefined();
+    expect(previousResult([])).toBeUndefined();
+    expect(previousResult([{ id: 'a', fingerprint: 'f1' }, { id: 'b', fingerprint: 'f1' }])).toBeUndefined();
+  });
+});
 
 const base: FingerprintInput = {
   sport: 'Basketball',

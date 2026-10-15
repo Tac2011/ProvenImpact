@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentRubric } from '@/lib/rubric';
+
 import { FEW_EXPERIENCES, REFERENCE_VERSION, SCORING_VERSION, TOP_COUNT } from '@/lib/topJobs/constants';
-import { basedOnLine, changedLine } from '@/lib/topJobs/fingerprint';
+import { basedOnLine, changedLine, previousResult } from '@/lib/topJobs/fingerprint';
 import { degreeLinkText, earlyNote, outlookText, payText } from '@/lib/topJobs/score';
-import { getTopJobsTables } from '@/lib/topJobs/tables';
+import { getTablesRubric, getTopJobsTables } from '@/lib/topJobs/tables';
 import { fingerprintFor, loadLatestResults, loadStudentInputs, summaryFor } from './load';
 import { TopJobsView, type CardView } from './TopJobsView';
 
@@ -18,8 +18,9 @@ export default async function TopJobsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const [tables, rubric] = await Promise.all([getTopJobsTables(supabase), getCurrentRubric(supabase)]);
-  if (!tables || !rubric) redirect('/profile');
+  const tables = await getTopJobsTables(supabase);
+  if (!tables) redirect('/profile');
+  const rubric = await getTablesRubric(supabase, tables);
 
   const inputs = await loadStudentInputs(supabase, user.id);
 
@@ -37,7 +38,9 @@ export default async function TopJobsPage() {
   }
 
   const versions = { rubricVersionId: rubric.id, tablesVersionId: tables.id, reference: REFERENCE_VERSION, scoring: SCORING_VERSION };
-  const [latest, previous] = await loadLatestResults(supabase, user.id, 2);
+  const recent = await loadLatestResults(supabase, user.id, 10);
+  const latest = recent[0];
+  const previous = previousResult(recent);
   const upToDate = latest?.fingerprint === fingerprintFor(inputs, versions);
 
   const notes: string[] = [];

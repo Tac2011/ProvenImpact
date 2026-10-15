@@ -2,7 +2,9 @@
 
 -- Run all parts in order in the Supabase SQL editor, after 2026-10-15-top-jobs.sql.
 
--- Safe to rerun: existing rows are skipped.
+-- Safe to rerun. While tables v1 is a draft, a rerun updates its maps, open list, and job needs;
+
+-- once published, nothing in v1 changes (load changes as version 2). Other rows are skipped.
 
 insert into occupations (code, title, description, job_zone, median_wage, growth_pct, source_ids) values
   ('19-1031.02', 'Range Managers', 'Research or study range land management practices to provide sustained production of forage, livestock, and wildlife.', 4, 73010, 5.3, array['onet-31.0', 'nces-cip-soc-2020', 'bls-oews-national', 'bls-ep-table-1-2']),

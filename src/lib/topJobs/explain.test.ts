@@ -110,12 +110,29 @@ describe('reusableExplanations', () => {
   };
 
   it('reuses explanations still in the top 10 whose quoted experiences are unchanged', () => {
-    const reused = reusableExplanations(previous, ['13-1082.00', '11-2022.00'], material.experiences);
+    const reused = reusableExplanations(previous, ['13-1082.00', '11-2022.00'], material);
     expect(Object.keys(reused)).toEqual(['13-1082.00']);
   });
 
   it('drops one whose quoted experience was deleted', () => {
-    const reused = reusableExplanations(previous, ['13-1082.00'], [material.experiences[1]]);
+    const reused = reusableExplanations(previous, ['13-1082.00'], { ...material, experiences: [material.experiences[1]] });
     expect(reused).toEqual({});
+  });
+
+  it('drops one that quotes words the student has since removed, even with unchanged dates', () => {
+    const quoting = {
+      '13-1082.00': {
+        why: 'You "turned down scholarships to walk on" at Nebraska.',
+        experiences: [{ id: 'e1', updatedAt: '2026-10-15T10:00:00Z' }],
+      },
+      '11-2022.00': { why: 'Your "Academic All-Big Ten" honor shows it.', experiences: [] },
+    };
+    const removed: Material = {
+      ...material,
+      experiences: [{ ...material.experiences[0], quotes: ['earned a roster spot'] }, material.experiences[1]],
+      honors: [],
+    };
+    expect(reusableExplanations(quoting, ['13-1082.00', '11-2022.00'], material)).toEqual(quoting);
+    expect(reusableExplanations(quoting, ['13-1082.00', '11-2022.00'], removed)).toEqual({});
   });
 });

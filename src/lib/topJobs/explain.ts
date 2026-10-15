@@ -87,19 +87,13 @@ export function checkExplanations(
 
   const codes = new Set(jobs.map((job) => job.code));
   const experiences = new Map(material.experiences.map((e) => [e.id, e]));
-  const corpus = normalizeText(
-    [
-      ...material.experiences.flatMap((e) => [e.title, ...e.quotes]),
-      ...material.honors,
-      material.bio ?? '',
-    ].join('\n')
-  );
+  const corpus = corpusOf(material);
 
   const checked: Record<string, SavedExplanation> = {};
   for (const item of parsed.data.explanations) {
     const why = item.why.trim();
     if (!codes.has(item.code) || !why || why.length > EXPLANATION_MAX) continue;
-    if (!quotedPhrases(why).every((phrase) => corpus.includes(quoteCore(phrase)))) continue;
+    if (!quotesAreTheirs(why, corpus)) continue;
     checked[item.code] = {
       why,
       experiences: item.experience_ids
@@ -110,18 +104,39 @@ export function checkExplanations(
   return checked;
 }
 
-// An explanation is reused when its job is still in the top 10 and every experience it
-// drew on still exists, unchanged.
+// Everything the student wrote that an explanation may quote.
+function corpusOf(material: Material): string {
+  return normalizeText(
+    [
+      ...material.experiences.flatMap((e) => [e.title, ...e.quotes]),
+      ...material.honors,
+      material.bio ?? '',
+    ].join('\n')
+  );
+}
+
+function quotesAreTheirs(why: string, corpus: string): boolean {
+  return quotedPhrases(why).every((phrase) => corpus.includes(quoteCore(phrase)));
+}
+
+// An explanation is reused when its job is still in the top 10, every experience it drew
+// on still exists unchanged, and every quote is still in the student's current words (an
+// excluded evidence line, a deleted honor, or a new bio doesn't change any date).
 export function reusableExplanations(
   previous: Record<string, SavedExplanation>,
   top: string[],
-  current: MaterialExperience[]
+  material: Material
 ): Record<string, SavedExplanation> {
-  const stamps = new Map(current.map((e) => [e.id, e.updatedAt]));
+  const stamps = new Map(material.experiences.map((e) => [e.id, e.updatedAt]));
+  const corpus = corpusOf(material);
   const reused: Record<string, SavedExplanation> = {};
   for (const code of top) {
     const saved = previous[code];
-    if (saved && saved.experiences.every((e) => stamps.get(e.id) === e.updatedAt)) {
+    if (
+      saved &&
+      saved.experiences.every((e) => stamps.get(e.id) === e.updatedAt) &&
+      quotesAreTheirs(saved.why, corpus)
+    ) {
       reused[code] = saved;
     }
   }

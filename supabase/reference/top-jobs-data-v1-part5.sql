@@ -2,7 +2,9 @@
 
 -- Run all parts in order in the Supabase SQL editor, after 2026-10-15-top-jobs.sql.
 
--- Safe to rerun: existing rows are skipped.
+-- Safe to rerun. While tables v1 is a draft, a rerun updates its maps, open list, and job needs;
+
+-- once published, nothing in v1 changes (load changes as version 2). Other rows are skipped.
 
 insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '19-1031.02', '{"leadership":0.6478,"discipline":0,"resilience":0,"adaptability":0.3522,"communication":0,"execution":0}'),
@@ -105,7 +107,7 @@ insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '27-1012.00', '{"leadership":0,"discipline":0,"resilience":0,"adaptability":0.5096,"communication":0,"execution":0.4904}'),
   ((select id from top_jobs_tables where version = 1), '27-1013.00', '{"leadership":0,"discipline":0,"resilience":0,"adaptability":0.6905,"communication":0,"execution":0.3095}'),
   ((select id from top_jobs_tables where version = 1), '27-1014.00', '{"leadership":0.021,"discipline":0,"resilience":0.0036,"adaptability":0.7287,"communication":0,"execution":0.2467}')
-on conflict (tables_id, occupation_code) do update set needs = excluded.needs;
+on conflict (tables_id, occupation_code) do update set needs = excluded.needs where occupation_needs.tables_id in (select id from top_jobs_tables where published_at is null);
 
 insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '27-1021.00', '{"leadership":0.1308,"discipline":0,"resilience":0,"adaptability":0.676,"communication":0,"execution":0.1931}'),
@@ -208,7 +210,7 @@ insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '29-2035.00', '{"leadership":0,"discipline":0.2558,"resilience":0.0413,"adaptability":0,"communication":0.703,"execution":0}'),
   ((select id from top_jobs_tables where version = 1), '29-2036.00', '{"leadership":0,"discipline":0.4208,"resilience":0,"adaptability":0,"communication":0.5678,"execution":0.0114}'),
   ((select id from top_jobs_tables where version = 1), '29-2042.00', '{"leadership":0.0371,"discipline":0,"resilience":0.5034,"adaptability":0,"communication":0.4595,"execution":0}')
-on conflict (tables_id, occupation_code) do update set needs = excluded.needs;
+on conflict (tables_id, occupation_code) do update set needs = excluded.needs where occupation_needs.tables_id in (select id from top_jobs_tables where published_at is null);
 
 insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '29-2043.00', '{"leadership":0.0574,"discipline":0,"resilience":0.6279,"adaptability":0.0266,"communication":0.2881,"execution":0}'),
@@ -311,7 +313,7 @@ insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '49-2094.00', '{"leadership":0,"discipline":0.6715,"resilience":0.2226,"adaptability":0.1059,"communication":0,"execution":0}'),
   ((select id from top_jobs_tables where version = 1), '49-2095.00', '{"leadership":0,"discipline":0.6763,"resilience":0.2895,"adaptability":0,"communication":0,"execution":0.0341}'),
   ((select id from top_jobs_tables where version = 1), '49-2096.00', '{"leadership":0,"discipline":0.6678,"resilience":0.1756,"adaptability":0,"communication":0,"execution":0.1565}')
-on conflict (tables_id, occupation_code) do update set needs = excluded.needs;
+on conflict (tables_id, occupation_code) do update set needs = excluded.needs where occupation_needs.tables_id in (select id from top_jobs_tables where published_at is null);
 
 insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '49-2097.00', '{"leadership":0,"discipline":0.7708,"resilience":0.0534,"adaptability":0,"communication":0.1358,"execution":0.0399}'),
@@ -363,5 +365,5 @@ insert into occupation_needs (tables_id, occupation_code, needs) values
   ((select id from top_jobs_tables where version = 1), '53-6051.00', '{"leadership":0.2205,"discipline":0.6694,"resilience":0.1101,"adaptability":0,"communication":0,"execution":0}'),
   ((select id from top_jobs_tables where version = 1), '53-6051.01', '{"leadership":0.0379,"discipline":0.5941,"resilience":0.2994,"adaptability":0,"communication":0,"execution":0.0686}'),
   ((select id from top_jobs_tables where version = 1), '53-7021.00', '{"leadership":0,"discipline":0.7852,"resilience":0.2148,"adaptability":0,"communication":0,"execution":0}')
-on conflict (tables_id, occupation_code) do update set needs = excluded.needs;
+on conflict (tables_id, occupation_code) do update set needs = excluded.needs where occupation_needs.tables_id in (select id from top_jobs_tables where published_at is null);
 

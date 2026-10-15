@@ -3,11 +3,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { checkAndLogRun } from '@/lib/aiRuns';
 import { requestJobExplanations } from '@/lib/claude';
-import { getCurrentRubric } from '@/lib/rubric';
+
 import { REFERENCE_VERSION, SCORING_VERSION, TOP_COUNT } from '@/lib/topJobs/constants';
 import { checkExplanations, reusableExplanations, type JobToExplain } from '@/lib/topJobs/explain';
 import { rankJobs, type Needs } from '@/lib/topJobs/score';
-import { getTopJobsTables } from '@/lib/topJobs/tables';
+import { getTablesRubric, getTopJobsTables } from '@/lib/topJobs/tables';
 import type { Versions } from '@/lib/topJobs/fingerprint';
 import { fingerprintFor, loadLatestResults, loadStudentInputs, summaryFor } from './load';
 
@@ -24,8 +24,9 @@ export async function generateTopJobs(): Promise<GenerateResult> {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: SIGNED_OUT };
 
-  const [tables, rubric] = await Promise.all([getTopJobsTables(supabase), getCurrentRubric(supabase)]);
-  if (!tables || !rubric) return { ok: false, error: FAILED };
+  const tables = await getTopJobsTables(supabase);
+  if (!tables) return { ok: false, error: FAILED };
+  const rubric = await getTablesRubric(supabase, tables);
 
   const inputs = await loadStudentInputs(supabase, user.id);
   if (!inputs.hasProfile || !inputs.assessmentComplete) return { ok: false, error: NOT_READY };
@@ -74,7 +75,7 @@ export async function generateTopJobs(): Promise<GenerateResult> {
 
   const top = ranked.slice(0, TOP_COUNT);
   const topCodes = top.map((job) => job.code);
-  const explanations = reusableExplanations(latest?.explanations ?? {}, topCodes, inputs.material.experiences);
+  const explanations = reusableExplanations(latest?.explanations ?? {}, topCodes, inputs.material);
   const missing = top.filter((job) => !explanations[job.code]);
 
   if (latest && latest.fingerprint === currentFingerprint && missing.length === 0) {
