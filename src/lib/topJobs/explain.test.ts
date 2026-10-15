@@ -59,6 +59,20 @@ describe('checkExplanations', () => {
     expect(checked['11-2022.00'].why).toContain('Academic All-Big Ten');
   });
 
+  it('accepts a quote with punctuation inside the closing quotation mark', () => {
+    const checked = checkExplanations(
+      {
+        explanations: [
+          { code: '13-1082.00', why: 'You said, "turned down scholarships to walk on," which took nerve.', experience_ids: ['e1'] },
+          { code: '11-2022.00', why: 'You "earned a roster spot."', experience_ids: ['e1'] },
+        ],
+      },
+      jobs,
+      material
+    );
+    expect(Object.keys(checked).sort()).toEqual(['11-2022.00', '13-1082.00']);
+  });
+
   it('drops an explanation that quotes words the student never wrote', () => {
     const checked = checkExplanations(
       { explanations: [{ code: '13-1082.00', why: 'You "led the nation in assists" last year.', experience_ids: ['e1'] }] },

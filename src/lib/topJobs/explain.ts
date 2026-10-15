@@ -71,6 +71,12 @@ function normalizeText(text: string): string {
     .trim();
 }
 
+// American style puts commas and periods inside the closing quotation mark, so a quote
+// is matched without the punctuation at its edges.
+function quoteCore(phrase: string): string {
+  return normalizeText(phrase).replace(/^[\s.,;:!?'"-]+|[\s.,;:!?'"-]+$/g, '');
+}
+
 export function checkExplanations(
   raw: unknown,
   jobs: JobToExplain[],
@@ -93,7 +99,7 @@ export function checkExplanations(
   for (const item of parsed.data.explanations) {
     const why = item.why.trim();
     if (!codes.has(item.code) || !why || why.length > EXPLANATION_MAX) continue;
-    if (!quotedPhrases(why).every((phrase) => corpus.includes(normalizeText(phrase)))) continue;
+    if (!quotedPhrases(why).every((phrase) => corpus.includes(quoteCore(phrase)))) continue;
     checked[item.code] = {
       why,
       experiences: item.experience_ids
