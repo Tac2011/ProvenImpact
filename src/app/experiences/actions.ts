@@ -1,15 +1,14 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { checkAndLogRun } from '@/lib/aiRuns';
 import { askFollowupQuestions, requestMapping } from '@/lib/claude';
 import { getCurrentRubric, type Rubric } from '@/lib/rubric';
 import {
   applyFollowupAnswers,
   athleteTexts,
-  isOverDailyLimit,
   keepFollowupQuestions,
   retryDecision,
-  runWindowStart,
   validateAnswers,
   validateMapping,
   validatePartialAnswers,
@@ -41,7 +40,6 @@ const NOT_FOUND = 'We could not find that experience.';
 const SAVE_ERROR = 'We could not save that. Please try again.';
 const NO_RUBRIC = 'This feature is not available yet.';
 const FIX_ANSWERS = 'Please fix the answers marked below.';
-const LIMIT_REACHED = "You've reached today's limit of 20 tries. Please try again tomorrow.";
 const STILL_READING = 'This experience is still being read. Wait a minute, then refresh the page.';
 const NOTHING_TO_SAVE = 'Write at least one answer before saving.';
 const ALREADY_SUBMITTED = 'This experience was already submitted. Refresh the page to see it.';
@@ -67,8 +65,8 @@ async function loadExperience(
   return (data as ExperienceRow | null) ?? null;
 }
 
-// Every action that calls Claude goes through here: it checks the rubric and the daily
-// limit, then logs the run. If the count can't be read, it refuses rather than spends.
+// Every action that calls Claude goes through here: it checks the rubric, then the
+// shared daily limit (which also logs the run).
 async function startRun(
   supabase: Supabase,
   userId: string
@@ -78,23 +76,8 @@ async function startRun(
     return { ok: false, error: NO_RUBRIC };
   }
 
-  const { count, error } = await supabase
-    .from('experience_runs')
-    .select('*', { count: 'exact', head: true })
-    .eq('athlete_id', userId)
-    .gte('created_at', runWindowStart(new Date()));
-  if (error) {
-    return { ok: false, error: SAVE_ERROR };
-  }
-  if (isOverDailyLimit(count ?? 0)) {
-    return { ok: false, error: LIMIT_REACHED };
-  }
-
-  const { error: logError } = await supabase.from('experience_runs').insert({ athlete_id: userId });
-  if (logError) {
-    return { ok: false, error: SAVE_ERROR };
-  }
-  return { ok: true, rubric };
+  const run = await checkAndLogRun(supabase, userId);
+  return run.ok ? { ok: true, rubric } : run;
 }
 
 async function saveExperience(
