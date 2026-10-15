@@ -84,6 +84,7 @@ export default async function ProfilePage() {
         listsError={loadError !== null}
         thisYear={thisYear}
         honors={(honorsResult.data ?? []) as HonorRow[]}
+        welcome={profile === null}
       />
     </main>
   );
