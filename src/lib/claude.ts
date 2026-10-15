@@ -6,6 +6,7 @@ import { buildBioPrompt } from './bioPrompts';
 import { MappingOutputSchema, type ExperienceAnswers, type Followup } from './experiences';
 import { buildFollowupPrompt, buildMappingPrompt, type PromptParts } from './experiencePrompts';
 import type { RubricCompetency } from './rubric';
+import { ExplainOutputSchema, buildExplainPrompt, type JobToExplain, type Material } from './topJobs/explain';
 
 // Server code only. The key is read from ANTHROPIC_API_KEY and never reaches the browser.
 
@@ -89,4 +90,11 @@ const BIO_TIMEOUT_MS = 60_000;
 // Returns Claude's raw bio reading for checkBioOutput to check, or null if the call failed.
 export async function requestBioReading(bio: string, earlierIdeas: string[]): Promise<unknown | null> {
   return structuredCall('bio', 'low', buildBioPrompt(bio, earlierIdeas), BioOutputSchema, BIO_TIMEOUT_MS);
+}
+
+const EXPLAIN_TIMEOUT_MS = 60_000;
+
+// Returns Claude's raw explanations for checkExplanations to check, or null if the call failed.
+export async function requestJobExplanations(jobs: JobToExplain[], material: Material): Promise<unknown | null> {
+  return structuredCall('explain', 'low', buildExplainPrompt(jobs, material), ExplainOutputSchema, EXPLAIN_TIMEOUT_MS);
 }
