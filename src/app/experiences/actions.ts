@@ -12,6 +12,7 @@ import {
   runWindowStart,
   validateAnswers,
   validateMapping,
+  validatePartialAnswers,
   type AnswerErrors,
   type AnswerKey,
   type ExperienceAnswers,
@@ -42,6 +43,8 @@ const NO_RUBRIC = 'This feature is not available yet.';
 const FIX_ANSWERS = 'Please fix the answers marked below.';
 const LIMIT_REACHED = "You've reached today's limit of 20 tries. Please try again tomorrow.";
 const STILL_READING = 'This experience is still being read. Wait a minute, then refresh the page.';
+const NOTHING_TO_SAVE = 'Write at least one answer before saving.';
+const ALREADY_SUBMITTED = 'This experience was already submitted. Refresh the page to see it.';
 
 async function currentUserId(supabase: Supabase): Promise<string | null> {
   const {
@@ -236,7 +239,58 @@ export async function updateExperience(
     return { ok: false, error: SAVE_ERROR };
   }
 
-  await processExperience(supabase, run.rubric, { ...experience, ...checked.answers }, false);
+  // An experience saved to finish later is being submitted for the first time,
+  // so it gets the follow-up questions like any new one.
+  const askFollowups = experience.status === 'in_progress';
+  await processExperience(supabase, run.rubric, { ...experience, ...checked.answers }, askFollowups);
+  return { ok: true, id };
+}
+
+// Saves what the athlete has typed so far without calling Claude, so it doesn't use a
+// daily try. With an id, it only updates an experience that is still in progress.
+export async function saveForLater(
+  id: string | null,
+  input: Partial<Record<AnswerKey, unknown>>
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  if (!userId) {
+    return { ok: false, error: SIGNED_OUT };
+  }
+
+  const checked = validatePartialAnswers(input);
+  if (!checked.ok) {
+    return checked.empty
+      ? { ok: false, error: NOTHING_TO_SAVE }
+      : { ok: false, error: FIX_ANSWERS, fieldErrors: checked.errors };
+  }
+
+  if (!id) {
+    const { data, error } = await supabase
+      .from('experiences')
+      .insert({ athlete_id: userId, ...checked.answers, status: 'in_progress' })
+      .select('id')
+      .single();
+    if (error || !data) {
+      return { ok: false, error: SAVE_ERROR };
+    }
+    return { ok: true, id: data.id };
+  }
+
+  // The status filter means a second tab that already submitted it can't be overwritten.
+  const { data: saved, error } = await supabase
+    .from('experiences')
+    .update({ ...checked.answers, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('athlete_id', userId)
+    .eq('status', 'in_progress')
+    .select('id');
+  if (error) {
+    return { ok: false, error: SAVE_ERROR };
+  }
+  if (!saved || saved.length === 0) {
+    return { ok: false, error: (await loadExperience(supabase, userId, id)) ? ALREADY_SUBMITTED : NOT_FOUND };
+  }
   return { ok: true, id };
 }
 

@@ -223,7 +223,7 @@ create table experiences (
   obstacle           text not null,
   followups          jsonb not null default '[]',  -- [{ "question": "...", "answer": "..." | null }]
   status             text not null default 'draft'
-                       check (status in ('draft', 'needs_followup', 'mapped', 'failed', 'confirmed')),
+                       check (status in ('in_progress', 'draft', 'needs_followup', 'mapped', 'failed', 'confirmed')),
   rubric_version_id  uuid references rubric_versions(id),
   behaviors          text[],
   resume_bullet      text,

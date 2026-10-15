@@ -8,7 +8,7 @@ import {
   type AnswerErrors,
   type ExperienceAnswers,
 } from '@/lib/experiences';
-import { createExperience, updateExperience, type ActionResult } from './actions';
+import { createExperience, saveForLater, updateExperience, type ActionResult } from './actions';
 
 const EMPTY: ExperienceAnswers = {
   title: '',
@@ -21,40 +21,60 @@ const EMPTY: ExperienceAnswers = {
 export function ExperienceForm({
   experienceId,
   initialAnswers,
+  inProgress = false,
 }: {
   experienceId?: string;
   initialAnswers?: ExperienceAnswers;
+  inProgress?: boolean;
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<ExperienceAnswers>(initialAnswers ?? EMPTY);
   const [fieldErrors, setFieldErrors] = useState<AnswerErrors>({});
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<'reading' | 'saving' | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
+  // Saving for later would throw away results Claude already gave, so it's only
+  // offered before the experience has been submitted.
+  const canSaveForLater = !experienceId || inProgress;
+
+  async function run(
+    kind: 'reading' | 'saving',
+    action: () => Promise<ActionResult>,
+    next: (id: string) => string
+  ) {
+    setBusy(kind);
     setError(null);
     setFieldErrors({});
 
     let result: ActionResult;
     try {
-      result = experienceId
-        ? await updateExperience(experienceId, answers)
-        : await createExperience(answers);
+      result = await action();
     } catch {
       result = { ok: false, error: 'Something went wrong. Please try again.' };
     }
 
     if (!result.ok) {
-      setBusy(false);
+      setBusy(null);
       setError(result.error);
       setFieldErrors(result.fieldErrors ?? {});
       return;
     }
 
-    router.push(`/experiences/${result.id}`);
+    router.push(next(result.id));
     router.refresh();
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    run(
+      'reading',
+      () => (experienceId ? updateExperience(experienceId, answers) : createExperience(answers)),
+      (id) => `/experiences/${id}`
+    );
+  }
+
+  function handleSaveForLater() {
+    run('saving', () => saveForLater(experienceId ?? null, answers), () => '/experiences');
   }
 
   return (
@@ -65,7 +85,7 @@ export function ExperienceForm({
           value: answers[field.key],
           maxLength: ANSWER_MAX_LENGTH,
           required: true,
-          disabled: busy,
+          disabled: busy !== null,
           onChange: (e: { target: { value: string } }) =>
             setAnswers({ ...answers, [field.key]: e.target.value }),
           className: 'rounded border border-gray-300 p-2 text-sm disabled:bg-gray-50',
@@ -99,13 +119,33 @@ export function ExperienceForm({
       <div className="flex items-center gap-4">
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy !== null}
           className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
         >
-          {busy ? 'Reading your experience...' : experienceId ? 'Save changes' : 'Show my strengths'}
+          {busy === 'reading'
+            ? 'Reading your experience...'
+            : experienceId && !inProgress
+              ? 'Save changes'
+              : 'Show my strengths'}
         </button>
-        {busy && <span className="text-sm text-gray-500">This can take up to a minute.</span>}
+        {canSaveForLater && (
+          <button
+            type="button"
+            onClick={handleSaveForLater}
+            disabled={busy !== null}
+            className="rounded border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+          >
+            {busy === 'saving' ? 'Saving...' : 'Save and finish later'}
+          </button>
+        )}
+        {busy === 'reading' && <span className="text-sm text-gray-500">This can take up to a minute.</span>}
       </div>
+      {canSaveForLater && (
+        <p className="-mt-3 text-xs text-gray-500">
+          Not ready yet? Save what you have and come back any time. Saving for later doesn&rsquo;t
+          use one of your daily tries.
+        </p>
+      )}
     </form>
   );
 }
