@@ -143,8 +143,12 @@ language for markup. Changes go back into the JSON files; nothing in code.
 ### Job needs
 
 For each occupation, its need for each rubric competency (0 to 1) comes from
-its work style importance ratings passed through table 1, then normalized so
-the competencies sum to 1. Computed in the build script and stored.
+its positive Work Styles Impact ratings passed through table 1, normalized so
+the competencies sum to 1. O\*NET rates most jobs as needing a similar mix, so
+each job is then **contrasted with the average job**: only what it needs more
+than average is kept, renormalized to sum 1 (a job exactly like the average
+spreads evenly). Without this, a Project Manager and a Sales Manager look the
+same and strengths can't separate jobs. Computed in the build script and stored.
 
 ### Student strength profile
 
@@ -161,7 +165,8 @@ Each rubric competency gets a strength from 0 to 1:
 
 ### Candidates and degree fit
 
-- **Fields:** every field on `athlete_education` rows: current primary (1.0),
+- **Fields:** every field on `athlete_education` rows: current primary (0.85, so a minor that also
+  leads to the job can add its bonus),
   current secondary (0.6), previous primary (0.8), previous secondary (0.5).
   "Not listed" fields (typed text) have no code and add no candidates.
 - **Degree fit** for an occupation: the highest weight among the student's

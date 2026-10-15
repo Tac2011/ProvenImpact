@@ -164,6 +164,31 @@ export function buildNeeds(
   return needs;
 }
 
+// O*NET rates most jobs as needing a similar mix of work styles, so raw needs barely
+// separate one job from another. Keep only what each job needs more than the average
+// job does, renormalized, so a leadership-heavy job and a detail-heavy job look different.
+export function contrastNeeds(
+  needs: Record<string, Record<string, number>>,
+  competencies: string[]
+): Record<string, Record<string, number>> {
+  const codes = Object.keys(needs);
+  const mean = Object.fromEntries(
+    competencies.map((c) => [c, codes.reduce((sum, code) => sum + (needs[code][c] ?? 0), 0) / Math.max(codes.length, 1)])
+  );
+  return Object.fromEntries(
+    codes.map((code) => {
+      const above = competencies.map((c) => Math.max(0, (needs[code][c] ?? 0) - mean[c]));
+      const sum = above.reduce((s, v) => s + v, 0);
+      return [
+        code,
+        Object.fromEntries(
+          competencies.map((c, i) => [c, sum > 1e-9 ? round4(above[i] / sum) : round4(1 / competencies.length)])
+        ),
+      ];
+    })
+  );
+}
+
 function round4(value: number): number {
   return Math.round(value * 10000) / 10000;
 }

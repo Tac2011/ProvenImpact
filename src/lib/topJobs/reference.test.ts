@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildFieldOccupations,
   buildNeeds,
+  contrastNeeds,
   buildOccupations,
   dropToHeader,
   missingOpenCodes,
@@ -138,6 +139,22 @@ describe('buildNeeds', () => {
       communication: 0,
       execution: 0,
     });
+  });
+
+  it('contrasts each job with the average job, so what sets it apart drives the match', () => {
+    const contrasted = contrastNeeds(
+      {
+        A: { leadership: 0.75, discipline: 0.25, resilience: 0, adaptability: 0, communication: 0, execution: 0 },
+        B: { leadership: 0.25, discipline: 0.75, resilience: 0, adaptability: 0, communication: 0, execution: 0 },
+        C: { leadership: 0.5, discipline: 0.5, resilience: 0, adaptability: 0, communication: 0, execution: 0 },
+      },
+      competencies
+    );
+    expect(contrasted.A.leadership).toBe(1);
+    expect(contrasted.A.discipline).toBe(0);
+    expect(contrasted.B.discipline).toBe(1);
+    // A job exactly like the average has nothing distinctive: spread evenly.
+    expect(contrasted.C.leadership).toBeCloseTo(1 / 6, 4);
   });
 
   it('spreads needs evenly when an occupation has no positive work styles', () => {

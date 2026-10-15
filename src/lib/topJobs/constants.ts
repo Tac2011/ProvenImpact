@@ -15,7 +15,7 @@ export const SELF_ONLY_CAP = 0.5; // without evidence: 0.5 * self
 
 // Degree fit.
 export const FIELD_WEIGHTS = {
-  currentPrimary: 1,
+  currentPrimary: 0.85, // below 1, so a minor that also leads to the job can still add its bonus
   currentSecondary: 0.6,
   previousPrimary: 0.8,
   previousSecondary: 0.5,

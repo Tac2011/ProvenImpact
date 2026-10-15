@@ -29,11 +29,20 @@ describe('fieldsFromEducation', () => {
       { '52.02': 'Business', '27.01': 'Mathematics', '23.01': 'English', '16.04': 'Slavic Languages' }
     );
     expect(fields).toEqual([
-      { code: '52.02', title: 'Business', weight: 1 },
+      { code: '52.02', title: 'Business', weight: 0.85 },
       { code: '27.01', title: 'Mathematics', weight: 0.6 },
       { code: '23.01', title: 'English', weight: 0.8 },
       { code: '16.04', title: 'Slavic Languages', weight: 0.5 },
     ]);
+  });
+
+  it('leaves room for a minor to lift a job its major also leads to', () => {
+    const fields = fieldsFromEducation(
+      [{ isCurrent: true, primaryCode: '52.02', secondaryCode: '27.01' }],
+      { '52.02': 'Business', '27.01': 'Mathematics' }
+    );
+    const fits = degreeFits(fields, { '52.02': ['BOTH', 'MAJOR'], '27.01': ['BOTH'] });
+    expect(fits.get('BOTH')!.fit).toBeGreaterThan(fits.get('MAJOR')!.fit);
   });
 });
 

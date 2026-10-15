@@ -12,6 +12,7 @@ import { parseCsv } from '../src/lib/referenceData';
 import {
   buildFieldOccupations,
   buildNeeds,
+  contrastNeeds,
   buildOccupations,
   dropToHeader,
   missingOpenCodes,
@@ -62,7 +63,10 @@ function main() {
     process.exit(1);
   }
   const pairs = buildFieldOccupations(parseCsv(read('crosswalk.csv')), occupations);
-  const needs = buildNeeds(parseTsv(read('Work Styles.txt')), styleMap, RUBRIC_KEYS, occupations.map((o) => o.code));
+  const needs = contrastNeeds(
+    buildNeeds(parseTsv(read('Work Styles.txt')), styleMap, RUBRIC_KEYS, occupations.map((o) => o.code)),
+    RUBRIC_KEYS
+  );
 
   const sources = [
     { id: 'onet-31.0', publisher: 'National Center for O*NET Development', dataset: 'O*NET Database', edition: '31.0', url: 'https://www.onetcenter.org/database.html', checksum: sha('Work Styles.txt') },
@@ -75,10 +79,10 @@ function main() {
   // Inserts in batches of 100, packed into files of about 90 KB: one 400 KB file failed in
   // the Supabase SQL editor. Every insert skips rows that already exist, so any part can be
   // rerun. Parts must run in order (part 1 has the occupations the others reference).
-  const batches = (header: string, rows: string[], conflict: string) => {
+  const batches = (header: string, rows: string[], conflict: string, action = 'do nothing') => {
     const out: string[] = [];
     for (let i = 0; i < rows.length; i += BATCH) {
-      out.push(`${header}\n${rows.slice(i, i + BATCH).join(',\n')}\non conflict ${conflict} do nothing;`);
+      out.push(`${header}\n${rows.slice(i, i + BATCH).join(',\n')}\non conflict ${conflict} ${action};`);
     }
     return out;
   };
@@ -106,7 +110,9 @@ function main() {
       occupations.map(
         (o) => `  ((select id from top_jobs_tables where version = 1), ${q(o.code)}, ${q(JSON.stringify(needs[o.code]))})`
       ),
-      '(tables_id, occupation_code)'
+      '(tables_id, occupation_code)',
+      // Needs are derived, so a rerun after a scoring change replaces them.
+      'do update set needs = excluded.needs'
     ),
   ];
 
