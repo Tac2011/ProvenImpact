@@ -15,6 +15,7 @@ import {
 } from '@/lib/education';
 import { validateEducation, type EducationValidation } from '@/lib/validateEducation';
 import { EducationFields } from './EducationFields';
+import { schoolSummary, type BioSchool } from '@/lib/bioImport';
 
 export function PreviousSchools({
   athleteId,
@@ -23,6 +24,8 @@ export function PreviousSchools({
   colleges,
   fields,
   thisYear,
+  suggestions,
+  onSuggestionDone,
 }: {
   athleteId: string;
   rows: EducationRow[];
@@ -30,6 +33,8 @@ export function PreviousSchools({
   colleges: PickerOption[];
   fields: PickerOption[];
   thisYear: number;
+  suggestions: BioSchool[];
+  onSuggestionDone: (index: number) => void;
 }) {
   const router = useRouter();
   // A row id while editing that row, 'new' while adding, null otherwise.
@@ -39,8 +44,11 @@ export function PreviousSchools({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+  // Which bio suggestion the 'new' form was started from, so saving it clears the suggestion.
+  const [fromSuggestion, setFromSuggestion] = useState<number | null>(null);
 
   function startEditing(id: string, start: EducationFormValues) {
+    setFromSuggestion(null);
     setEditing(id);
     setValues(start);
     setErrors({});
@@ -66,6 +74,10 @@ export function PreviousSchools({
     if (saveError) {
       setError(saveError.message);
       return;
+    }
+    if (editing === 'new' && fromSuggestion !== null) {
+      onSuggestionDone(fromSuggestion);
+      setFromSuggestion(null);
     }
     setEditing(null);
     router.refresh();
@@ -119,6 +131,26 @@ export function PreviousSchools({
   return (
     <section className="mt-10 flex flex-col gap-3 border-t pt-6">
       <h2 className="text-lg font-semibold">Previous schools</h2>
+      {suggestions.map((school, i) => (
+        <div key={i} className="flex flex-col gap-1 rounded border border-blue-200 bg-blue-50 p-3 text-sm">
+          <span>From your bio: {schoolSummary(school)}</span>
+          <span className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                startEditing('new', school.values);
+                setFromSuggestion(i);
+              }}
+              className="text-blue-700 underline"
+            >
+              Add
+            </button>
+            <button type="button" onClick={() => onSuggestionDone(i)} className="underline">
+              Skip
+            </button>
+          </span>
+        </div>
+      ))}
       {rows.length === 0 && editing !== 'new' && (
         <p className="text-sm text-gray-600">No previous schools.</p>
       )}

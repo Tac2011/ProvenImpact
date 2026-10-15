@@ -468,6 +468,8 @@ export function ProfileForm({
         colleges={collegePicks}
         fields={fieldPicks}
         thisYear={thisYear}
+        suggestions={schoolSuggestions}
+        onSuggestionDone={(index) => setSchoolSuggestions(schoolSuggestions.filter((_, j) => j !== index))}
       />
     )}
 
