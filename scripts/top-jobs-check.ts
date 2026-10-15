@@ -6,7 +6,7 @@
 import { writeFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { requestJobExplanations } from '../src/lib/claude';
-import { TOP_COUNT } from '../src/lib/topJobs/constants';
+import { FIELD_WEIGHTS, TOP_COUNT } from '../src/lib/topJobs/constants';
 import { checkExplanations, type JobToExplain, type Material } from '../src/lib/topJobs/explain';
 import { degreeLinkText, earlyNote, rankJobs, type EvidenceItem, type Needs, type StudentField } from '../src/lib/topJobs/score';
 
@@ -61,7 +61,7 @@ const STUDENTS: TestStudent[] = [
   {
     name: 'Business Administration major, Mathematics minor (5 experiences)',
     fields: [
-      { code: '52.02', title: 'Business Administration, Management and Operations', weight: 1 },
+      { code: '52.02', title: 'Business Administration, Management and Operations', weight: FIELD_WEIGHTS.currentPrimary },
       { code: '27.01', title: 'Mathematics', weight: 0.6 },
     ],
     stories: [
@@ -78,7 +78,7 @@ const STUDENTS: TestStudent[] = [
   {
     name: 'English major, Russian Literature minor (6 experiences, strong leadership and execution)',
     fields: [
-      { code: '23.01', title: 'English Language and Literature, General', weight: 1 },
+      { code: '23.01', title: 'English Language and Literature, General', weight: FIELD_WEIGHTS.currentPrimary },
       { code: '16.04', title: 'Slavic, Baltic and Albanian Languages, Literatures, and Linguistics', weight: 0.6 },
     ],
     stories: [
