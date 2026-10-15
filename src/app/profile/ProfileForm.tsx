@@ -19,6 +19,7 @@ import { collegeOptions, fieldOptions } from '@/lib/pickerSearch';
 import { SPORTS, getSportType } from '@/lib/sports';
 import { CurrentSchool, type Transfer } from './CurrentSchool';
 import { PreviousSchools } from './PreviousSchools';
+import { Honors, type HonorRow } from './Honors';
 
 interface ProfileRow {
   id: string;
@@ -71,6 +72,7 @@ export function ProfileForm({
   previousEducation,
   listsError,
   thisYear,
+  honors,
 }: {
   userId: string;
   initialProfile: ProfileRow | null;
@@ -81,6 +83,7 @@ export function ProfileForm({
   previousEducation: EducationRow[];
   listsError: boolean;
   thisYear: number;
+  honors: HonorRow[];
 }) {
   const router = useRouter();
   const initialValues = toFormValues(initialProfile);
@@ -305,6 +308,8 @@ export function ProfileForm({
         thisYear={thisYear}
       />
     )}
+
+    <Honors athleteId={userId} rows={honors} />
 
     {showDeleteAccount && (
       <DeleteAccountSection
