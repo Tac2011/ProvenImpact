@@ -19,6 +19,21 @@ import { collegeOptions, fieldOptions } from '@/lib/pickerSearch';
 import { SPORTS, getSportType } from '@/lib/sports';
 import { CurrentSchool, type Transfer } from './CurrentSchool';
 import { PreviousSchools } from './PreviousSchools';
+import { Honors, type HonorRow } from './Honors';
+import {
+  BIO_FIELD_LABELS,
+  EDUCATION_BIO_FIELDS,
+  bioFieldText,
+  honorLine,
+  mergeBio,
+  takeBioValue,
+  type BioField,
+  type BioSchool,
+  type CheckedBio,
+  type FormState,
+} from '@/lib/bioImport';
+import { BioImport } from './BioImport';
+import { applyBioImport } from './bioActions';
 
 interface ProfileRow {
   id: string;
@@ -71,6 +86,8 @@ export function ProfileForm({
   previousEducation,
   listsError,
   thisYear,
+  honors,
+  welcome,
 }: {
   userId: string;
   initialProfile: ProfileRow | null;
@@ -81,6 +98,8 @@ export function ProfileForm({
   previousEducation: EducationRow[];
   listsError: boolean;
   thisYear: number;
+  honors: HonorRow[];
+  welcome: boolean;
 }) {
   const router = useRouter();
   const initialValues = toFormValues(initialProfile);
@@ -99,6 +118,14 @@ export function ProfileForm({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // The bio reading waiting for Save, what it filled, and where it disagrees with saved values.
+  const [bio, setBio] = useState<{ importId: string; bio: CheckedBio } | null>(null);
+  const [filled, setFilled] = useState<BioField[]>([]);
+  const [differences, setDifferences] = useState<BioField[]>([]);
+  const [keptHonors, setKeptHonors] = useState<boolean[]>([]);
+  // Previous schools from the bio stay offered until added or skipped, even after Save.
+  const [schoolSuggestions, setSchoolSuggestions] = useState<BioSchool[]>([]);
+  const [bioReading, setBioReading] = useState(false);
 
   const collegePicks = useMemo(() => collegeOptions(colleges), [colleges]);
   const fieldPicks = useMemo(() => fieldOptions(fields), [fields]);
@@ -109,6 +136,57 @@ export function ProfileForm({
     setTransfer(next);
     setEducation(next || !currentEducation ? emptyEducation() : educationToForm(currentEducation));
     setEducationErrors({});
+  }
+
+  // Positions and disciplines live in their text boxes until Save, so read them from there.
+  function formState(): FormState {
+    return {
+      profile: { ...values, positions: splitTags(positionsText), disciplines: splitTags(disciplinesText) },
+      education,
+    };
+  }
+
+  function showFormState(next: FormState) {
+    setValues(next.profile);
+    setPositionsText(next.profile.positions.join(', '));
+    setDisciplinesText(next.profile.disciplines.join(', '));
+    setEducation(next.education);
+  }
+
+  function handleBioRead(result: { importId: string; bio: CheckedBio }) {
+    const merged = mergeBio(formState(), result.bio);
+    showFormState(merged);
+    setFilled(merged.filled);
+    setDifferences(merged.differences);
+    setBio(result);
+    setKeptHonors(result.bio.honors.map(() => true));
+    setSchoolSuggestions(result.bio.previous);
+    setSaved(false);
+  }
+
+  function takeFromBio(field: BioField) {
+    if (!bio) return;
+    showFormState(takeBioValue(formState(), bio.bio, field));
+    setDifferences(differences.filter((f) => f !== field));
+    setFilled([...filled, field]);
+  }
+
+  function fromBioTag(field: BioField) {
+    return filled.includes(field) ? (
+      <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700">From your bio</span>
+    ) : null;
+  }
+
+  function bioSaysLine(field: BioField) {
+    if (!bio || !differences.includes(field)) return null;
+    return (
+      <span className="text-sm text-gray-600">
+        Your bio says: &ldquo;{bioFieldText(bio.bio, field)}&rdquo;{' '}
+        <button type="button" onClick={() => takeFromBio(field)} className="text-blue-700 underline">
+          Use this
+        </button>
+      </span>
+    );
   }
 
   async function handleDelete() {
@@ -179,44 +257,80 @@ export function ProfileForm({
       transfer: transfer ? { end_month: transfer.month, end_year: transfer.year } : null,
     });
 
-    setSaving(false);
-
     if (error) {
+      setSaving(false);
       setSaveError(error.message);
       return;
     }
 
+    // The profile is saved: clear the transfer now, so retrying the bio step below can
+    // never run the transfer a second time.
     setValues(nextValues);
     setTransfer(null);
+
+    if (bio) {
+      const kept = bio.bio.honors.filter((_, i) => keptHonors[i]);
+      let applied: Awaited<ReturnType<typeof applyBioImport>>;
+      try {
+        applied = await applyBioImport(bio.importId, kept);
+      } catch {
+        applied = {
+          ok: false,
+          error: "Your profile was saved, but we couldn't add your honors and story ideas. Click Save again to retry.",
+        };
+      }
+      if (!applied.ok) {
+        setSaving(false);
+        setSaveError(applied.error);
+        router.refresh();
+        return;
+      }
+      setBio(null);
+      setFilled([]);
+      setDifferences([]);
+      setKeptHonors([]);
+    }
+
+    setSaving(false);
     setSaved(true);
     router.refresh();
   }
 
   return (
     <>
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <BioImport welcome={welcome} onRead={handleBioRead} onBusyChange={setBioReading} />
+    {bio && (
+      <p className="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+        We filled in what we found in your bio. Check everything, then click Save Profile.
+      </p>
+    )}
+    <form onSubmit={handleSubmit}>
+      {/* Locked while a bio is being read, so the result can't overwrite new typing. */}
+      <fieldset disabled={bioReading} className="flex flex-col gap-4 disabled:opacity-60">
       <label className="flex flex-col gap-1">
-        First Name
+        <span>First Name{fromBioTag('firstName')}</span>
         <input
           value={values.firstName}
           onChange={(e) => setValues({ ...values, firstName: e.target.value })}
           className="rounded border px-3 py-2"
         />
+        {bioSaysLine('firstName')}
         {errors.firstName && <span className="text-sm text-red-600">{errors.firstName}</span>}
       </label>
 
       <label className="flex flex-col gap-1">
-        Last Name
+        <span>Last Name{fromBioTag('lastName')}</span>
         <input
           value={values.lastName}
           onChange={(e) => setValues({ ...values, lastName: e.target.value })}
           className="rounded border px-3 py-2"
         />
+        {bioSaysLine('lastName')}
         {errors.lastName && <span className="text-sm text-red-600">{errors.lastName}</span>}
       </label>
 
       <label className="flex flex-col gap-1">
-        Sport
+        <span>Sport{fromBioTag('sport')}</span>
         <select
           value={values.sport}
           onChange={(e) => {
@@ -232,31 +346,39 @@ export function ProfileForm({
             </option>
           ))}
         </select>
+        {bioSaysLine('sport')}
+        {bio && !bio.bio.profile.sport && bio.bio.profile.sportText && !values.sport && (
+          <span className="text-sm text-gray-600">
+            Your bio says &ldquo;{bio.bio.profile.sportText}&rdquo;. Pick your sport.
+          </span>
+        )}
         {errors.sport && <span className="text-sm text-red-600">{errors.sport}</span>}
       </label>
 
       {values.sportType === 'team' && (
         <label className="flex flex-col gap-1">
-          Positions (comma-separated)
+          <span>Positions (comma-separated){fromBioTag('positions')}</span>
           <input
             value={positionsText}
             onChange={(e) => setPositionsText(e.target.value)}
             placeholder="e.g. Midfielder, Defender"
             className="rounded border px-3 py-2"
           />
+          {bioSaysLine('positions')}
           {errors.positions && <span className="text-sm text-red-600">{errors.positions}</span>}
         </label>
       )}
 
       {values.sportType === 'individual' && (
         <label className="flex flex-col gap-1">
-          Disciplines (comma-separated)
+          <span>Disciplines (comma-separated){fromBioTag('disciplines')}</span>
           <input
             value={disciplinesText}
             onChange={(e) => setDisciplinesText(e.target.value)}
             placeholder="e.g. Long Jump, 100m Dash"
             className="rounded border px-3 py-2"
           />
+          {bioSaysLine('disciplines')}
           {errors.disciplines && (
             <span className="text-sm text-red-600">{errors.disciplines}</span>
           )}
@@ -268,7 +390,34 @@ export function ProfileForm({
           We couldn&apos;t load the school and field lists. Please refresh.
         </p>
       ) : (
-        <CurrentSchool
+        <>
+          {bio && (
+            <div className="flex flex-col gap-1 border-t pt-4 text-sm text-gray-700">
+              {EDUCATION_BIO_FIELDS.some((f) => filled.includes(f)) && (
+                <span>
+                  Filled from your bio:{' '}
+                  {EDUCATION_BIO_FIELDS.filter((f) => filled.includes(f))
+                    .map((f) => BIO_FIELD_LABELS[f])
+                    .join(', ')}
+                  .
+                </span>
+              )}
+              {EDUCATION_BIO_FIELDS.filter((f) => differences.includes(f)).map((f) => (
+                <span key={f}>
+                  Your {BIO_FIELD_LABELS[f]}: {bioSaysLine(f)}
+                </span>
+              ))}
+              {bio.bio.current?.collegeText && !bio.bio.current.values.college.id && !education.college.id && (
+                <span>Your bio says &ldquo;{bio.bio.current.collegeText}&rdquo;. Pick your school.</span>
+              )}
+              {bio.bio.current?.fieldText && !bio.bio.current.values.primaryField.id && !education.primaryField.id && (
+                <span>
+                  Your bio says your field of study is &ldquo;{bio.bio.current.fieldText}&rdquo;. Pick it below.
+                </span>
+              )}
+            </div>
+          )}
+          <CurrentSchool
           values={education}
           onChange={setEducation}
           errors={educationErrors}
@@ -281,7 +430,26 @@ export function ProfileForm({
           oldDegree={initialProfile?.degree ?? null}
           transfer={transfer}
           onTransferChange={handleTransferChange}
-        />
+          />
+        </>
+      )}
+
+      {bio && bio.bio.honors.length > 0 && (
+        <fieldset className="flex flex-col gap-2 border-t pt-4">
+          <legend className="font-semibold">Honors from your bio</legend>
+          <p className="text-sm text-gray-600">Checked honors are added to your profile when you save.</p>
+          {bio.bio.honors.map((honor, i) => (
+            <label key={i} className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={keptHonors[i] ?? false}
+                onChange={(e) => setKeptHonors(keptHonors.map((kept, j) => (j === i ? e.target.checked : kept)))}
+                className="mt-1"
+              />
+              {honorLine(honor)}
+            </label>
+          ))}
+        </fieldset>
       )}
 
       <button
@@ -293,6 +461,7 @@ export function ProfileForm({
       </button>
       {saved && <p className="text-sm text-green-700">Profile saved.</p>}
       {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+      </fieldset>
     </form>
 
     {currentEducation && !listsError && (
@@ -303,8 +472,12 @@ export function ProfileForm({
         colleges={collegePicks}
         fields={fieldPicks}
         thisYear={thisYear}
+        suggestions={schoolSuggestions}
+        onSuggestionDone={(index) => setSchoolSuggestions((current) => current.filter((_, j) => j !== index))}
       />
     )}
+
+    <Honors athleteId={userId} rows={honors} />
 
     {showDeleteAccount && (
       <DeleteAccountSection

@@ -4,7 +4,15 @@ export const ANSWER_MAX_LENGTH = 1000;
 export const MAX_FOLLOWUPS = 2;
 export const DAILY_RUN_LIMIT = 20;
 
-export type ExperienceStatus = 'draft' | 'needs_followup' | 'mapped' | 'failed' | 'confirmed';
+// in_progress = the athlete saved it to finish later; it hasn't been sent to Claude.
+// draft = submitted and waiting on Claude.
+export type ExperienceStatus =
+  | 'in_progress'
+  | 'draft'
+  | 'needs_followup'
+  | 'mapped'
+  | 'failed'
+  | 'confirmed';
 export type Strength = 'strong' | 'moderate';
 
 export interface ExperienceAnswers {
@@ -58,6 +66,7 @@ export const EXPERIENCE_FIELDS: { key: AnswerKey; label: string; helper: string;
 ];
 
 export const STATUS_LABELS: Record<ExperienceStatus, string> = {
+  in_progress: 'In progress',
   draft: 'Not finished',
   needs_followup: 'Needs your answers',
   mapped: 'Ready to review',
@@ -84,6 +93,35 @@ export function validateAnswers(
   }
 
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, answers };
+}
+
+// Saving to finish later: blanks are fine, but at least one answer must have text.
+export function validatePartialAnswers(
+  input: Partial<Record<AnswerKey, unknown>>
+):
+  | { ok: true; answers: ExperienceAnswers }
+  | { ok: false; empty: boolean; errors: AnswerErrors } {
+  const answers = {} as ExperienceAnswers;
+  const errors: AnswerErrors = {};
+
+  for (const field of EXPERIENCE_FIELDS) {
+    const raw = input[field.key];
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (value.length > ANSWER_MAX_LENGTH) {
+      errors[field.key] = `Keep it under ${ANSWER_MAX_LENGTH} characters.`;
+    }
+    answers[field.key] = value;
+  }
+
+  const empty = Object.values(answers).every((value) => value === '');
+  if (empty || Object.keys(errors).length > 0) {
+    return { ok: false, empty, errors };
+  }
+  return { ok: true, answers };
+}
+
+export function displayTitle(title: string): string {
+  return title.trim() || 'Untitled experience';
 }
 
 // Claude may return blanks, repeats, or more questions than asked for. Keep at most two real ones.

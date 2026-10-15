@@ -1,17 +1,17 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { checkAndLogRun } from '@/lib/aiRuns';
 import { askFollowupQuestions, requestMapping } from '@/lib/claude';
 import { getCurrentRubric, type Rubric } from '@/lib/rubric';
 import {
   applyFollowupAnswers,
   athleteTexts,
-  isOverDailyLimit,
   keepFollowupQuestions,
   retryDecision,
-  runWindowStart,
   validateAnswers,
   validateMapping,
+  validatePartialAnswers,
   type AnswerErrors,
   type AnswerKey,
   type ExperienceAnswers,
@@ -40,8 +40,9 @@ const NOT_FOUND = 'We could not find that experience.';
 const SAVE_ERROR = 'We could not save that. Please try again.';
 const NO_RUBRIC = 'This feature is not available yet.';
 const FIX_ANSWERS = 'Please fix the answers marked below.';
-const LIMIT_REACHED = "You've reached today's limit of 20 tries. Please try again tomorrow.";
 const STILL_READING = 'This experience is still being read. Wait a minute, then refresh the page.';
+const NOTHING_TO_SAVE = 'Write at least one answer before saving.';
+const ALREADY_SUBMITTED = 'This experience was already submitted. Refresh the page to see it.';
 
 async function currentUserId(supabase: Supabase): Promise<string | null> {
   const {
@@ -64,8 +65,8 @@ async function loadExperience(
   return (data as ExperienceRow | null) ?? null;
 }
 
-// Every action that calls Claude goes through here: it checks the rubric and the daily
-// limit, then logs the run. If the count can't be read, it refuses rather than spends.
+// Every action that calls Claude goes through here: it checks the rubric, then the
+// shared daily limit (which also logs the run).
 async function startRun(
   supabase: Supabase,
   userId: string
@@ -75,23 +76,8 @@ async function startRun(
     return { ok: false, error: NO_RUBRIC };
   }
 
-  const { count, error } = await supabase
-    .from('experience_runs')
-    .select('*', { count: 'exact', head: true })
-    .eq('athlete_id', userId)
-    .gte('created_at', runWindowStart(new Date()));
-  if (error) {
-    return { ok: false, error: SAVE_ERROR };
-  }
-  if (isOverDailyLimit(count ?? 0)) {
-    return { ok: false, error: LIMIT_REACHED };
-  }
-
-  const { error: logError } = await supabase.from('experience_runs').insert({ athlete_id: userId });
-  if (logError) {
-    return { ok: false, error: SAVE_ERROR };
-  }
-  return { ok: true, rubric };
+  const run = await checkAndLogRun(supabase, userId);
+  return run.ok ? { ok: true, rubric } : run;
 }
 
 async function saveExperience(
@@ -172,8 +158,26 @@ async function processExperience(
   });
 }
 
+// Links the story idea the athlete started from. A failure here doesn't undo the save;
+// the idea just stays open.
+async function markIdeaUsed(
+  supabase: Supabase,
+  userId: string,
+  ideaId: string | null,
+  experienceId: string
+): Promise<void> {
+  if (typeof ideaId !== 'string' || !ideaId) return;
+  await supabase
+    .from('story_ideas')
+    .update({ status: 'used', experience_id: experienceId })
+    .eq('id', ideaId)
+    .eq('athlete_id', userId)
+    .eq('status', 'open');
+}
+
 export async function createExperience(
-  input: Partial<Record<AnswerKey, unknown>>
+  input: Partial<Record<AnswerKey, unknown>>,
+  ideaId: string | null = null
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const userId = await currentUserId(supabase);
@@ -202,6 +206,7 @@ export async function createExperience(
   }
 
   const experience = data as ExperienceRow;
+  await markIdeaUsed(supabase, userId, ideaId, experience.id);
   await processExperience(supabase, run.rubric, experience, true);
   return { ok: true, id: experience.id };
 }
@@ -236,7 +241,60 @@ export async function updateExperience(
     return { ok: false, error: SAVE_ERROR };
   }
 
-  await processExperience(supabase, run.rubric, { ...experience, ...checked.answers }, false);
+  // An experience saved to finish later is being submitted for the first time,
+  // so it gets the follow-up questions like any new one.
+  const askFollowups = experience.status === 'in_progress';
+  await processExperience(supabase, run.rubric, { ...experience, ...checked.answers }, askFollowups);
+  return { ok: true, id };
+}
+
+// Saves what the athlete has typed so far without calling Claude, so it doesn't use a
+// daily try. With an id, it only updates an experience that is still in progress.
+export async function saveForLater(
+  id: string | null,
+  input: Partial<Record<AnswerKey, unknown>>,
+  ideaId: string | null = null
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  if (!userId) {
+    return { ok: false, error: SIGNED_OUT };
+  }
+
+  const checked = validatePartialAnswers(input);
+  if (!checked.ok) {
+    return checked.empty
+      ? { ok: false, error: NOTHING_TO_SAVE }
+      : { ok: false, error: FIX_ANSWERS, fieldErrors: checked.errors };
+  }
+
+  if (!id) {
+    const { data, error } = await supabase
+      .from('experiences')
+      .insert({ athlete_id: userId, ...checked.answers, status: 'in_progress' })
+      .select('id')
+      .single();
+    if (error || !data) {
+      return { ok: false, error: SAVE_ERROR };
+    }
+    await markIdeaUsed(supabase, userId, ideaId, data.id);
+    return { ok: true, id: data.id };
+  }
+
+  // The status filter means a second tab that already submitted it can't be overwritten.
+  const { data: saved, error } = await supabase
+    .from('experiences')
+    .update({ ...checked.answers, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('athlete_id', userId)
+    .eq('status', 'in_progress')
+    .select('id');
+  if (error) {
+    return { ok: false, error: SAVE_ERROR };
+  }
+  if (!saved || saved.length === 0) {
+    return { ok: false, error: (await loadExperience(supabase, userId, id)) ? ALREADY_SUBMITTED : NOT_FOUND };
+  }
   return { ok: true, id };
 }
 

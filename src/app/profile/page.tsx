@@ -6,6 +6,7 @@ import { getUserRole } from '@/lib/roles';
 import { canRequestDeletion } from '@/lib/deletionRequests';
 import type { College, EducationRow, FieldOfStudy } from '@/lib/education';
 import { ProfileForm } from './ProfileForm';
+import type { HonorRow } from './Honors';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -32,7 +33,7 @@ export default async function ProfilePage() {
   const assessmentComplete = (ratedCount ?? 0) >= COMPETENCIES.length;
   const role = await getUserRole(supabase, user.id);
 
-  const [collegesResult, fieldsResult, educationResult] = await Promise.all([
+  const [collegesResult, fieldsResult, educationResult, honorsResult] = await Promise.all([
     supabase.from('colleges').select('id, name, city, state, nicknames').order('name'),
     supabase.from('fields_of_study').select('code, title').order('title'),
     supabase
@@ -41,6 +42,11 @@ export default async function ProfilePage() {
       .eq('athlete_id', user.id)
       .order('end_year', { ascending: false })
       .order('end_month', { ascending: false }),
+    supabase
+      .from('athlete_honors')
+      .select('id, title, years')
+      .eq('athlete_id', user.id)
+      .order('created_at'),
   ]);
 
   const loadError = collegesResult.error ?? fieldsResult.error ?? educationResult.error;
@@ -77,6 +83,8 @@ export default async function ProfilePage() {
         previousEducation={educationRows.filter((r) => !r.is_current)}
         listsError={loadError !== null}
         thisYear={thisYear}
+        honors={(honorsResult.data ?? []) as HonorRow[]}
+        welcome={profile === null}
       />
     </main>
   );

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   applyFollowupAnswers,
   athleteTexts,
+  displayTitle,
   isAthleteQuote,
   isOverDailyLimit,
   keepFollowupQuestions,
   runWindowStart,
   validateAnswers,
   validateMapping,
+  validatePartialAnswers,
   retryDecision,
   type ExperienceAnswers,
 } from './experiences';
@@ -258,5 +260,49 @@ describe('retryDecision', () => {
   it('does nothing once the experience has moved on', () => {
     expect(retryDecision('mapped', '2026-10-01T17:00:00Z', now)).toBe('done');
     expect(retryDecision('needs_followup', '2026-10-01T17:00:00Z', now)).toBe('done');
+  });
+
+  it('never runs an experience the athlete is still writing', () => {
+    expect(retryDecision('in_progress', '2026-10-01T17:00:00Z', now)).toBe('done');
+  });
+});
+
+describe('validatePartialAnswers', () => {
+  it('keeps blank answers as empty text and trims the rest', () => {
+    const result = validatePartialAnswers({ title: '  ACL comeback ', what_you_did: '   ' });
+    expect(result).toEqual({
+      ok: true,
+      answers: { title: 'ACL comeback', what_you_did: '', frequency: '', result: '', obstacle: '' },
+    });
+  });
+
+  it('accepts a single filled answer that is not the title', () => {
+    const result = validatePartialAnswers({ obstacle: 'Tore my ACL in the first game.' });
+    expect(result.ok).toBe(true);
+  });
+
+  it('refuses to save when every answer is blank', () => {
+    const result = validatePartialAnswers({ title: ' ', what_you_did: 42 });
+    expect(result).toEqual({ ok: false, empty: true, errors: {} });
+  });
+
+  it('flags an answer over 1,000 characters', () => {
+    const result = validatePartialAnswers({ title: 'Long one', result: 'x'.repeat(1001) });
+    expect(result).toEqual({
+      ok: false,
+      empty: false,
+      errors: { result: 'Keep it under 1000 characters.' },
+    });
+  });
+});
+
+describe('displayTitle', () => {
+  it('uses the title when there is one', () => {
+    expect(displayTitle('ACL comeback')).toBe('ACL comeback');
+  });
+
+  it('falls back when the title is blank', () => {
+    expect(displayTitle('')).toBe('Untitled experience');
+    expect(displayTitle('   ')).toBe('Untitled experience');
   });
 });

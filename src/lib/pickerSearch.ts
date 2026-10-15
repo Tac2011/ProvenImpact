@@ -9,7 +9,7 @@ export interface PickerOption {
 
 // Lowercase; drop periods and apostrophes ("U.N.O." -> "uno"); other punctuation
 // becomes a space ("K-State" -> "k state").
-function normalize(text: string): string {
+export function normalize(text: string): string {
   return text
     .toLowerCase()
     .replace(/[.'\u2019]/g, '')

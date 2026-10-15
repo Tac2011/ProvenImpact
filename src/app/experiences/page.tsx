@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { competencyLabel } from '@/lib/rubric';
-import { STATUS_LABELS, type ExperienceStatus } from '@/lib/experiences';
+import { STATUS_LABELS, displayTitle, type ExperienceStatus } from '@/lib/experiences';
 import { requireExperiencesAccess } from './access';
+import { StoryIdeas } from './StoryIdeas';
 
 interface ListRow {
   id: string;
@@ -19,7 +20,18 @@ export default async function ExperiencesPage() {
     .eq('athlete_id', user.id)
     .order('created_at', { ascending: false });
 
-  const experiences = (data ?? []) as ListRow[];
+  // Unfinished ones first, so they're easy to pick back up; newest first within each group.
+  const experiences = ((data ?? []) as ListRow[]).sort(
+    (a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress')
+  );
+
+  const { data: ideaRows } = await supabase
+    .from('story_ideas')
+    .select('id, prompt')
+    .eq('athlete_id', user.id)
+    .eq('status', 'open')
+    .order('created_at', { ascending: false });
+  const ideas = (ideaRows ?? []) as { id: string; prompt: string }[];
 
   return (
     <main className="mx-auto max-w-2xl p-8">
@@ -37,6 +49,8 @@ export default async function ExperiencesPage() {
         something hard. We&apos;ll show you which strengths it proves, in your own words.
       </p>
 
+      <StoryIdeas ideas={ideas} />
+
       {experiences.length === 0 ? (
         <p className="mt-8 text-sm text-gray-600">No experiences yet. Add your first one to get started.</p>
       ) : (
@@ -52,7 +66,7 @@ export default async function ExperiencesPage() {
                   className="block rounded border p-4 hover:bg-gray-50"
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <span className="font-medium">{experience.title}</span>
+                    <span className="font-medium">{displayTitle(experience.title)}</span>
                     <span className="shrink-0 text-xs text-gray-500">
                       {STATUS_LABELS[experience.status]}
                     </span>

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { competencyLabel, getRubricCompetencies } from '@/lib/rubric';
-import type { ExperienceStatus, Followup, Strength } from '@/lib/experiences';
+import { displayTitle, type ExperienceStatus, type Followup, type Strength } from '@/lib/experiences';
 import { requireExperiencesAccess } from '../access';
 import { FollowupForm } from './FollowupForm';
 import { ResultCard, type EvidenceView } from './ResultCard';
@@ -72,7 +72,22 @@ export default async function ExperiencePage({ params }: { params: Promise<{ id:
       <Link href="/experiences" className="text-sm text-gray-500 hover:underline">
         &larr; My Experiences
       </Link>
-      <h1 className="mt-2 text-2xl font-bold">{experience.title}</h1>
+      <h1 className="mt-2 text-2xl font-bold">{displayTitle(experience.title)}</h1>
+
+      {status === 'in_progress' && (
+        <div className="mt-6 rounded border p-4">
+          <p className="text-gray-700">
+            You haven&apos;t finished this one yet. Pick up where you left off whenever you&apos;re
+            ready.
+          </p>
+          <Link
+            href={`/experiences/${experience.id}/edit`}
+            className="mt-3 inline-block rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          >
+            Continue writing
+          </Link>
+        </div>
+      )}
 
       {status === 'needs_followup' && (
         <FollowupForm

@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
+import { BioOutputSchema } from './bioImport';
+import { buildBioPrompt } from './bioPrompts';
 import { MappingOutputSchema, type ExperienceAnswers, type Followup } from './experiences';
 import { buildFollowupPrompt, buildMappingPrompt, type PromptParts } from './experiencePrompts';
 import type { RubricCompetency } from './rubric';
@@ -25,7 +27,8 @@ async function structuredCall(
   label: string,
   effort: 'low' | 'medium',
   prompt: PromptParts,
-  schema: z.ZodType
+  schema: z.ZodType,
+  timeoutMs = TIMEOUT_MS
 ): Promise<unknown | null> {
   try {
     const response = await getClient().beta.messages.parse(
@@ -39,7 +42,7 @@ async function structuredCall(
         system: prompt.system,
         messages: [{ role: 'user', content: prompt.user }],
       },
-      { timeout: TIMEOUT_MS, maxRetries: 0 }
+      { timeout: timeoutMs, maxRetries: 0 }
     );
 
     if (response.stop_reason === 'refusal') {
@@ -49,7 +52,7 @@ async function structuredCall(
     return response.parsed_output ?? null;
   } catch (error) {
     if (error instanceof Anthropic.APIConnectionTimeoutError) {
-      console.error(`[claude:${label}] timed out after ${TIMEOUT_MS / 1000} seconds`);
+      console.error(`[claude:${label}] timed out after ${timeoutMs / 1000} seconds`);
     } else if (error instanceof Anthropic.APIError) {
       console.error(`[claude:${label}] API error ${error.status}: ${error.message}`);
     } else {
@@ -78,4 +81,12 @@ export async function requestMapping(
     buildMappingPrompt(competencies, answers, followups),
     MappingOutputSchema
   );
+}
+
+// Reading a bio writes the whole cleaned bio back, so it gets longer than an experience.
+const BIO_TIMEOUT_MS = 60_000;
+
+// Returns Claude's raw bio reading for checkBioOutput to check, or null if the call failed.
+export async function requestBioReading(bio: string, earlierIdeas: string[]): Promise<unknown | null> {
+  return structuredCall('bio', 'low', buildBioPrompt(bio, earlierIdeas), BioOutputSchema, BIO_TIMEOUT_MS);
 }
