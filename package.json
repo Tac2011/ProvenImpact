@@ -12,7 +12,8 @@
     "build-reference-data": "tsx scripts/build-reference-data.ts",
     "education-check": "tsx --env-file=.env.local scripts/education-check.ts",
     "bio-check": "tsx --env-file=.env.local scripts/bio-check.ts",
-    "build-top-jobs-data": "tsx scripts/build-top-jobs-data.ts"
+    "build-top-jobs-data": "tsx scripts/build-top-jobs-data.ts",
+    "top-jobs-check": "tsx --env-file=.env.local scripts/top-jobs-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
