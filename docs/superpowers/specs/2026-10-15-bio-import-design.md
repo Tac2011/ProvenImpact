@@ -95,8 +95,10 @@ after the current school is saved, matching the section's existing rule.
 - **Add an honor** opens Title (required, up to 200 characters) and Years
   (optional, up to 100 characters), with Save and Cancel.
 - Add, edit, and remove save right away, like Previous schools.
-- **Honors from the bio** appear as checked suggestions at the top of the
-  section. They are added when the student clicks the profile's Save.
+- **Honors from the bio** appear as checked suggestions in the profile
+  form, just above **Save Profile** (that Save is what adds them, and the
+  Honors section sits outside the form). They are added when the student
+  clicks Save.
   Unchecking one skips it. An honor already on the list (same title,
   ignoring case and spacing) is not suggested again.
 
