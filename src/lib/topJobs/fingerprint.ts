@@ -60,6 +60,15 @@ export function changedLine(saved: InputsSummary, current: InputsSummary): strin
   return 'Your profile has changed since these results.';
 }
 
+export function outOfDateLine(saved: InputsSummary, current: InputsSummary, savedVersions: Versions, currentVersions: Versions): string {
+  const matchingChanged =
+    savedVersions.rubricVersionId !== currentVersions.rubricVersionId ||
+    savedVersions.tablesVersionId !== currentVersions.tablesVersionId ||
+    savedVersions.reference !== currentVersions.reference ||
+    savedVersions.scoring !== currentVersions.scoring;
+  return matchingChanged ? "We've improved how we match jobs since these results." : changedLine(saved, current);
+}
+
 export function inProgressLine(count: number): string {
   return `Finish your ${plural(count, 'in-progress experience')} to include ${count === 1 ? 'it' : 'them'}.`;
 }

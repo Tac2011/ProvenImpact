@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basedOnLine, changedLine, fingerprint, inProgressLine, previousResult, type FingerprintInput } from './fingerprint';
+import { basedOnLine, changedLine, fingerprint, inProgressLine, outOfDateLine, previousResult, type FingerprintInput } from './fingerprint';
 
 describe('previousResult', () => {
   it('skips Try again rows with the same inputs, so New badges survive a retry', () => {
@@ -88,5 +88,23 @@ describe('changedLine and basedOnLine', () => {
       'Based on your profile, self-assessment, and 1 experience.'
     );
     expect(basedOnLine({ experiences: 0, honors: 0, hasBio: false })).toBe('Based on your profile and self-assessment.');
+  });
+});
+
+describe('outOfDateLine', () => {
+  const v1 = { rubricVersionId: 'r1', tablesVersionId: 't1', reference: 'onet-31.0', scoring: 1 };
+  const summary = { experiences: 4, honors: 2, hasBio: true };
+
+  it('says matching improved when the rubric, tables, or scoring changed, even if the profile changed too', () => {
+    const line = "We've improved how we match jobs since these results.";
+    expect(outOfDateLine(summary, { ...summary, experiences: 6 }, v1, { ...v1, tablesVersionId: 't2' })).toBe(line);
+    expect(outOfDateLine(summary, summary, v1, { ...v1, rubricVersionId: 'r2' })).toBe(line);
+    expect(outOfDateLine(summary, summary, v1, { ...v1, scoring: 2 })).toBe(line);
+  });
+
+  it('falls back to what the student changed when matching is the same', () => {
+    expect(outOfDateLine(summary, { ...summary, experiences: 5 }, v1, { ...v1 })).toBe(
+      "You've added 1 experience since these results."
+    );
   });
 });
