@@ -8,11 +8,14 @@ import {
   formatReportDate,
   graduationText,
   groupNotListed,
+  groupTopJobs,
+  mostSuggestedJobs,
   schoolText,
   type NotListedRow,
   type ReportAthlete,
   type ReportExperienceRow,
   type ReportLabel,
+  type ReportTopJobRow,
 } from './reports';
 
 function athlete(id: string, first: string, last: string, overrides: Partial<ReportAthlete> = {}): ReportAthlete {
@@ -254,5 +257,52 @@ describe('groupNotListed', () => {
       row('Field of study', 'esports', 'a1', 'Smith'),
     ]);
     expect(groups[0].athletes).toEqual(['Smith, A']);
+  });
+});
+
+function job(athleteId: string, rank: number, code: string, title: string | null, level = 'good'): ReportTopJobRow {
+  return { athlete_id: athleteId, created_at: '2026-10-16T15:00:00Z', rank, code, title, level };
+}
+
+describe('groupTopJobs', () => {
+  it('keeps each athlete jobs in rank order with the date and level text', () => {
+    const byAthlete = groupTopJobs([
+      job('a1', 2, '15-1252.00', 'Software Developers', 'possible'),
+      job('a1', 1, '15-1253.00', 'Software Quality Assurance Analysts and Testers', 'strong'),
+    ]);
+    expect(byAthlete.get('a1')).toEqual({
+      date: formatReportDate('2026-10-16T15:00:00Z'),
+      jobs: [
+        { rank: 1, title: 'Software Quality Assurance Analysts and Testers', level: 'Strong' },
+        { rank: 2, title: 'Software Developers', level: 'Possible' },
+      ],
+    });
+    expect(byAthlete.get('a2')).toBeUndefined();
+  });
+
+  it('falls back to the job code when the title is missing', () => {
+    expect(groupTopJobs([job('a1', 1, '11-9199.00', null)]).get('a1')?.jobs[0].title).toBe('11-9199.00');
+  });
+});
+
+describe('mostSuggestedJobs', () => {
+  const people = [athlete('a1', 'Joe', 'Athlete'), athlete('a2', 'Ann', 'Baker'), athlete('a3', 'Cal', 'Cole')];
+
+  it('counts athletes per job, most first, then by title, naming who', () => {
+    const rows = [
+      job('a1', 1, 'A', 'Web Developers'),
+      job('a1', 2, 'B', 'Computer Programmers'),
+      job('a2', 1, 'B', 'Computer Programmers'),
+      job('a3', 1, 'C', 'Accountants'),
+    ];
+    expect(mostSuggestedJobs(rows, people)).toEqual([
+      { code: 'B', title: 'Computer Programmers', athletes: ['Athlete, Joe', 'Baker, Ann'] },
+      { code: 'C', title: 'Accountants', athletes: ['Cole, Cal'] },
+      { code: 'A', title: 'Web Developers', athletes: ['Athlete, Joe'] },
+    ]);
+  });
+
+  it('leaves out athletes who are not in the report list', () => {
+    expect(mostSuggestedJobs([job('x9', 1, 'A', 'Web Developers')], people)).toEqual([]);
   });
 });
