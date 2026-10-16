@@ -1,7 +1,8 @@
 // Runs four test students through top jobs scoring and the real explanation call, and
-// writes a report for Todd and Maggi. Reads the newest top jobs tables version, draft
-// or published. Signs in as EDUCATION_CHECK_A (in .env.local) to read reference data.
-// Usage: npm run top-jobs-check -- <report.md>
+// writes a report for Todd and Maggi. Reads the given top jobs tables version (default:
+// the newest, draft or published) and scores with that version's rubric competencies.
+// Signs in as EDUCATION_CHECK_A (in .env.local) to read reference data.
+// Usage: npm run top-jobs-check -- <report.md> [version]
 
 import { writeFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
@@ -9,12 +10,6 @@ import { requestJobExplanations } from '../src/lib/claude';
 import { FIELD_WEIGHTS, TOP_COUNT } from '../src/lib/topJobs/constants';
 import { checkExplanations, type JobToExplain, type Material } from '../src/lib/topJobs/explain';
 import { degreeLinkText, earlyNote, rankJobs, type EvidenceItem, type Needs, type StudentField } from '../src/lib/topJobs/score';
-
-const KEYS = ['leadership', 'discipline', 'resilience', 'adaptability', 'communication', 'execution'];
-const LABELS: Record<string, string> = {
-  leadership: 'Leadership', discipline: 'Discipline', resilience: 'Resilience',
-  adaptability: 'Adaptability', communication: 'Communication', execution: 'Execution',
-};
 
 interface TestStudent {
   name: string;
@@ -41,7 +36,7 @@ const STUDENTS: TestStudent[] = [
       story('Graduating in three years', 'I graduated in three years while playing Division I basketball', ['discipline', 'strong'], ['execution', 'strong']),
       story('Staying ready off the bench', 'I played double-figure minutes in 34 of 35 games, almost all off the bench', ['adaptability', 'strong'], ['resilience', 'moderate']),
       story('Spain trip', 'I led the team in rebounds, assists and steals on our trip to Spain', ['leadership', 'moderate']),
-      story('ACL comeback', 'I tore my ACL in the first game of my junior year and came back to finish with 1,481 career points', ['resilience', 'strong']),
+      story('ACL comeback', 'I tore my ACL in the first game of my junior year and came back to finish with 1,481 career points', ['resilience', 'strong'], ['achievement', 'moderate']),
     ],
     selfScore: 4,
     honors: ['Academic All-Big Ten', 'Tom Osborne Citizenship Team', 'Big Ten Distinguished Scholar'],
@@ -51,8 +46,8 @@ const STUDENTS: TestStudent[] = [
     name: 'Charlie Thorne (sophomore, no field of study, 2 experiences)',
     fields: [],
     stories: [
-      story('Relay record', 'Our 4x400 relay broke the program record twice and qualified for the NCAA Championships', ['execution', 'strong'], ['communication', 'moderate']),
-      story('400 personal best', 'I dropped my 400 to 46.10, the seventh-best mark in school history', ['discipline', 'moderate']),
+      story('Relay record', 'Our 4x400 relay broke the program record twice and qualified for the NCAA Championships', ['execution', 'strong'], ['communication', 'moderate'], ['achievement', 'moderate']),
+      story('400 personal best', 'I dropped my 400 to 46.10, the seventh-best mark in school history', ['discipline', 'moderate'], ['achievement', 'moderate']),
     ],
     selfScore: 3,
     honors: ['Indoor All-Big 12, 4x400 Meter Relay'],
@@ -65,7 +60,7 @@ const STUDENTS: TestStudent[] = [
       { code: '27.01', title: 'Mathematics', weight: 0.6 },
     ],
     stories: [
-      story('Stats for the coaching staff', 'I built a spreadsheet that tracked our shot data and the coaches used it in film sessions', ['execution', 'strong'], ['discipline', 'moderate']),
+      story('Stats for the coaching staff', 'I built a spreadsheet that tracked our shot data and the coaches used it in film sessions', ['execution', 'strong'], ['discipline', 'moderate'], ['analytical', 'moderate']),
       story('Captain', 'I was voted captain my junior year and ran our team meetings', ['leadership', 'strong'], ['communication', 'moderate']),
       story('Early morning lifts', 'I lifted at 6 a.m. four days a week for three seasons', ['discipline', 'strong']),
       story('Position change', 'I switched from point guard to wing in two weeks when we lost a starter', ['adaptability', 'strong']),
@@ -98,7 +93,7 @@ const STUDENTS: TestStudent[] = [
 async function main() {
   const output = process.argv[2];
   if (!output) {
-    console.error('Usage: npm run top-jobs-check -- <report.md>');
+    console.error('Usage: npm run top-jobs-check -- <report.md> [version]');
     process.exit(1);
   }
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -113,16 +108,21 @@ async function main() {
     process.exit(1);
   }
 
-  const { data: tables } = await supabase
-    .from('top_jobs_tables')
-    .select('id, version, self_map, open_list')
-    .order('version', { ascending: false })
-    .limit(1)
-    .single();
+  const wanted = process.argv[3] ? Number(process.argv[3]) : null;
+  let tablesQuery = supabase.from('top_jobs_tables').select('id, version, rubric_version_id, self_map, open_list');
+  if (wanted !== null) tablesQuery = tablesQuery.eq('version', wanted);
+  const { data: tables } = await tablesQuery.order('version', { ascending: false }).limit(1).single();
   if (!tables) {
     console.error('No top jobs tables loaded. Run the data SQL first.');
     process.exit(1);
   }
+  // Score with the competencies the tables were built for, like the app does.
+  const { data: comps } = await supabase
+    .from('rubric_competencies')
+    .select('key, label')
+    .eq('rubric_version_id', tables.rubric_version_id);
+  const KEYS = ((comps ?? []) as { key: string; label: string }[]).map((c) => c.key);
+  const LABELS = Object.fromEntries(((comps ?? []) as { key: string; label: string }[]).map((c) => [c.key, c.label]));
   const openList = (tables.open_list as { code: string }[]).map((item) => item.code);
   const selfMap = tables.self_map as Record<string, Record<string, number>>;
 
