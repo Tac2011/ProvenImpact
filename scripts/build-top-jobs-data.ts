@@ -2,8 +2,10 @@
 // Inputs (git-ignored) in reference-downloads/top-jobs/: Occupation Data.txt, Job Zones.txt,
 // Work Styles.txt (O*NET 31.0), crosswalk.csv (NCES CIP-SOC sheet), wages.csv (BLS OEWS
 // national), projections.csv (BLS Employment Projections table 1.2).
-// Writes supabase/reference/top-jobs-data-v1-part1.sql, -part2.sql, and so on.
-// Usage: npm run build-top-jobs-data -- <review-doc.md>
+// Writes supabase/reference/top-jobs-data-v<version>-part1.sql, -part2.sql, and so on.
+// Version 1 loads everything; later versions add only their tables row and job needs,
+// reading their maps and competency keys from supabase/reference/top-jobs/v<version>/.
+// Usage: npm run build-top-jobs-data -- <version> <review-doc.md>
 
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -26,27 +28,30 @@ import { COMPETENCIES } from '../src/lib/competencies';
 
 const IN = 'reference-downloads/top-jobs';
 const TABLES = 'supabase/reference/top-jobs';
-const OUT = 'supabase/reference/top-jobs-data-v1.sql'; // written as -part1, -part2, ...
 const BATCH = 100;
 const MAX_FILE_CHARS = 90_000;
-const RUBRIC_KEYS = ['leadership', 'discipline', 'resilience', 'adaptability', 'communication', 'execution'];
+const V1_KEYS = ['leadership', 'discipline', 'resilience', 'adaptability', 'communication', 'execution'];
 const TODAY = new Date().toISOString().slice(0, 10);
 
 const read = (name: string) => readFileSync(join(IN, name), 'utf8');
-const json = <T>(name: string): T => JSON.parse(readFileSync(join(TABLES, name), 'utf8')) as T;
+const json = <T>(name: string, dir = TABLES): T => JSON.parse(readFileSync(join(dir, name), 'utf8')) as T;
 const sha = (name: string) => createHash('sha256').update(readFileSync(join(IN, name))).digest('hex').slice(0, 16);
 const q = (text: string) => `'${text.replace(/'/g, "''")}'`;
 const num = (value: number | null) => (value === null ? 'null' : String(value));
 
 function main() {
-  const reviewPath = process.argv[2];
-  if (!reviewPath) {
-    console.error('Usage: npm run build-top-jobs-data -- <review-doc.md>');
+  const version = Number(process.argv[2]);
+  const reviewPath = process.argv[3];
+  if (!Number.isInteger(version) || version < 1 || !reviewPath) {
+    console.error('Usage: npm run build-top-jobs-data -- <version> <review-doc.md>');
     process.exit(1);
   }
+  const maps = version === 1 ? TABLES : `${TABLES}/v${version}`;
+  const RUBRIC_KEYS = version === 1 ? V1_KEYS : json<string[]>('competencies.json', maps);
+  const OUT = `supabase/reference/top-jobs-data-v${version}.sql`; // written as -part1, -part2, ...
 
-  const styleMap = json<StyleMap>('style-map.json');
-  const selfMap = json<Record<string, Record<string, number>>>('self-map.json');
+  const styleMap = json<StyleMap>('style-map.json', maps);
+  const selfMap = json<Record<string, Record<string, number>>>('self-map.json', maps);
   const openList = json<{ code: string; reason: string }[]>('open-list.json');
   const excluded = json<Excluded>('excluded.json');
 
@@ -87,28 +92,31 @@ function main() {
     return out;
   };
 
+  // Occupations and field links are shared by every version, so only version 1 loads them.
+  const shared = version === 1;
+  const tablesId = `(select id from top_jobs_tables where version = ${version})`;
   const statements = [
-    ...sources.map(
+    ...(shared ? sources : []).map(
       (s) =>
         `insert into data_sources (id, publisher, dataset, edition, url, retrieved_on, checksum) values (${q(s.id)}, ${q(s.publisher)}, ${q(s.dataset)}, ${q(s.edition)}, ${q(s.url)}, ${q(TODAY)}, ${q(s.checksum)}) on conflict (id) do nothing;`
     ),
-    ...batches(
+    ...(shared ? batches(
       'insert into occupations (code, title, description, job_zone, median_wage, growth_pct, source_ids) values',
       occupations.map(
         (o) => `  (${q(o.code)}, ${q(o.title)}, ${q(o.description)}, ${o.jobZone}, ${num(o.medianWage)}, ${num(o.growthPct)}, ${sourceIds})`
       ),
       '(code)'
-    ),
-    ...batches(
+    ) : []),
+    ...(shared ? batches(
       'insert into field_occupations (cip_code, occupation_code) values',
       pairs.map((p) => `  (${q(p.cip)}, ${q(p.code)})`),
       '(cip_code, occupation_code)'
-    ),
-    `insert into top_jobs_tables (version, rubric_version_id, self_map, open_list) values (1, (select id from rubric_versions where version = 1), ${q(JSON.stringify(selfMap))}, ${q(JSON.stringify(openList))}) on conflict (version) do update set self_map = excluded.self_map, open_list = excluded.open_list where top_jobs_tables.published_at is null;`,
+    ) : []),
+    `insert into top_jobs_tables (version, rubric_version_id, self_map, open_list) values (${version}, (select id from rubric_versions where version = ${version}), ${q(JSON.stringify(selfMap))}, ${q(JSON.stringify(openList))}) on conflict (version) do update set self_map = excluded.self_map, open_list = excluded.open_list where top_jobs_tables.published_at is null;`,
     ...batches(
       'insert into occupation_needs (tables_id, occupation_code, needs) values',
       occupations.map(
-        (o) => `  ((select id from top_jobs_tables where version = 1), ${q(o.code)}, ${q(JSON.stringify(needs[o.code]))})`
+        (o) => `  (${tablesId}, ${q(o.code)}, ${q(JSON.stringify(needs[o.code]))})`
       ),
       '(tables_id, occupation_code)',
       // A rerun replaces needs only while the version is a draft, so published results never shift.
@@ -129,9 +137,9 @@ function main() {
   files.forEach((part, i) => {
     const header = [
       `-- Generated by scripts/build-top-jobs-data.ts. Part ${i + 1} of ${files.length}.`,
-      `-- Run all parts in order in the Supabase SQL editor, after 2026-10-15-top-jobs.sql.`,
-      '-- Safe to rerun. While tables v1 is a draft, a rerun updates its maps, open list, and job needs;',
-      '-- once published, nothing in v1 changes (load changes as version 2). Other rows are skipped.',
+      `-- Run all parts in order in the Supabase SQL editor, after ${version === 1 ? '2026-10-15-top-jobs.sql' : `rubric-v${version}.sql`}.`,
+      `-- Safe to rerun. While tables v${version} is a draft, a rerun updates its maps, open list, and job needs;`,
+      `-- once published, nothing in v${version} changes (load changes as a new version). Other rows are skipped.`,
     ];
     writeFileSync(OUT.replace('.sql', `-part${i + 1}.sql`), [...header, ...part, ''].join('\n\n'));
   });
@@ -143,11 +151,11 @@ function main() {
       .map(([k, w]) => `${k[0].toUpperCase()}${k.slice(1)} ${w}`)
       .join(', ');
   const review = [
-    '# Top Jobs Tables v1: for Todd and Maggi to review',
+    `# Top Jobs Tables v${version}: for Todd and Maggi to review`,
     '',
-    `Generated ${TODAY} from O*NET 31.0. Mark up anything to change; edits go back into the JSON files in \`supabase/reference/top-jobs/\`.`,
+    `Generated ${TODAY} from O*NET 31.0. Mark up anything to change; edits go back into the JSON files in \`${maps}/\`.`,
     '',
-    '## 1. What each job needs: O*NET work styles to our six competencies',
+    `## 1. What each job needs: O*NET work styles to our ${RUBRIC_KEYS.length} competencies`,
     '',
     'O*NET rates how much each work style matters in each job. This table decides which of our competencies each work style counts toward (weight 0 to 1).',
     '',
@@ -155,7 +163,7 @@ function main() {
     '|---|---|',
     ...Object.entries(styleMap).map(([style, map]) => `| ${style} | ${pretty(map)} |`),
     '',
-    '## 2. Self-assessment items to our six competencies',
+    `## 2. Self-assessment items to our ${RUBRIC_KEYS.length} competencies`,
     '',
     '| Self-assessment item | Counts toward |',
     '|---|---|',

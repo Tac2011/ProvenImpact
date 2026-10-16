@@ -1,0 +1,23 @@
+{
+  "Achievement Orientation": { "achievement": 1 },
+  "Adaptability": { "adaptability": 1 },
+  "Attention to Detail": { "discipline": 0.4, "execution": 0.3, "analytical": 0.3 },
+  "Cautiousness": { "discipline": 0.2 },
+  "Cooperation": { "communication": 0.8 },
+  "Dependability": { "discipline": 1 },
+  "Empathy": { "communication": 0.6 },
+  "Humility": { "communication": 0.3 },
+  "Initiative": { "execution": 0.7, "leadership": 0.3 },
+  "Innovation": { "analytical": 0.5, "adaptability": 0.4 },
+  "Integrity": { "discipline": 0.4 },
+  "Intellectual Curiosity": { "analytical": 0.8, "adaptability": 0.2 },
+  "Leadership Orientation": { "leadership": 1 },
+  "Optimism": { "resilience": 0.5 },
+  "Perseverance": { "resilience": 0.6, "achievement": 0.4 },
+  "Self-Confidence": { "leadership": 0.5 },
+  "Self-Control": { "discipline": 0.6, "resilience": 0.3 },
+  "Sincerity": { "communication": 0.3 },
+  "Social Orientation": { "communication": 0.8 },
+  "Stress Tolerance": { "resilience": 1 },
+  "Tolerance for Ambiguity": { "adaptability": 0.8 }
+}

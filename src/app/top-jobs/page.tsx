@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
 import { FEW_EXPERIENCES, REFERENCE_VERSION, SCORING_VERSION, TOP_COUNT } from '@/lib/topJobs/constants';
-import { basedOnLine, changedLine, inProgressLine, previousResult } from '@/lib/topJobs/fingerprint';
+import { basedOnLine, inProgressLine, outOfDateLine, previousResult } from '@/lib/topJobs/fingerprint';
 import { degreeLinkText, earlyNote, outlookText, payText } from '@/lib/topJobs/score';
 import { getTablesRubric, getTopJobsTables } from '@/lib/topJobs/tables';
 import { fingerprintFor, loadLatestResults, loadStudentInputs, summaryFor } from './load';
@@ -84,7 +84,7 @@ export default async function TopJobsPage() {
     notes.unshift(
       `Your top jobs, ${new Date(latest.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' })}.`,
       basedOnLine(latest.inputs_summary),
-      upToDate ? 'Your results are up to date.' : changedLine(latest.inputs_summary, summaryFor(inputs))
+      upToDate ? 'Your results are up to date.' : outOfDateLine(latest.inputs_summary, summaryFor(inputs), latest.versions, versions)
     );
     const newCount = cards.filter((card) => card.isNew).length;
     if (newCount > 0) notes.push(`${newCount} new ${newCount === 1 ? 'match' : 'matches'} since your last results.`);
