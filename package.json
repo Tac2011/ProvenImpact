@@ -10,6 +10,7 @@
     "test": "vitest run",
     "rubric-check": "tsx --env-file=.env.local scripts/rubric-check.ts",
     "build-reference-data": "tsx scripts/build-reference-data.ts",
+    "build-rubric-sql": "tsx scripts/build-rubric-sql.ts",
     "education-check": "tsx --env-file=.env.local scripts/education-check.ts",
     "bio-check": "tsx --env-file=.env.local scripts/bio-check.ts",
     "build-top-jobs-data": "tsx scripts/build-top-jobs-data.ts",
