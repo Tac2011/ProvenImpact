@@ -60,6 +60,10 @@ export function changedLine(saved: InputsSummary, current: InputsSummary): strin
   return 'Your profile has changed since these results.';
 }
 
+export function inProgressLine(count: number): string {
+  return `Finish your ${plural(count, 'in-progress experience')} to include ${count === 1 ? 'it' : 'them'}.`;
+}
+
 export function basedOnLine(summary: InputsSummary): string {
   const parts = ['your profile', 'self-assessment'];
   if (summary.experiences > 0) parts.push(plural(summary.experiences, 'experience'));

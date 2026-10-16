@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
 import { FEW_EXPERIENCES, REFERENCE_VERSION, SCORING_VERSION, TOP_COUNT } from '@/lib/topJobs/constants';
-import { basedOnLine, changedLine, previousResult } from '@/lib/topJobs/fingerprint';
+import { basedOnLine, changedLine, inProgressLine, previousResult } from '@/lib/topJobs/fingerprint';
 import { degreeLinkText, earlyNote, outlookText, payText } from '@/lib/topJobs/score';
 import { getTablesRubric, getTopJobsTables } from '@/lib/topJobs/tables';
 import { fingerprintFor, loadLatestResults, loadStudentInputs, summaryFor } from './load';
@@ -49,7 +49,7 @@ export default async function TopJobsPage() {
     notes.push(`You have ${plural(inputs.experienceCount, 'experience')}. Matches will lean on your degree until you add more.`);
   }
   if (inputs.inProgressCount > 0) {
-    notes.push(`Finish your ${plural(inputs.inProgressCount, 'in-progress experience')} to include them.`);
+    notes.push(inProgressLine(inputs.inProgressCount));
   }
 
   let cards: CardView[] = [];

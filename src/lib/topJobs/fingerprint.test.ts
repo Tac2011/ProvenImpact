@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basedOnLine, changedLine, fingerprint, previousResult, type FingerprintInput } from './fingerprint';
+import { basedOnLine, changedLine, fingerprint, inProgressLine, previousResult, type FingerprintInput } from './fingerprint';
 
 describe('previousResult', () => {
   it('skips Try again rows with the same inputs, so New badges survive a retry', () => {
@@ -54,6 +54,13 @@ describe('fingerprint', () => {
     expect(fingerprint({ ...base, fieldCodes: ['52.02'] })).not.toBe(f);
     expect(fingerprint({ ...base, bioImportId: null })).not.toBe(f);
     expect(fingerprint({ ...base, versions: { ...base.versions, tablesVersionId: 't2' } })).not.toBe(f);
+  });
+});
+
+describe('inProgressLine', () => {
+  it('says "it" for one experience and "them" for several', () => {
+    expect(inProgressLine(1)).toBe('Finish your 1 in-progress experience to include it.');
+    expect(inProgressLine(3)).toBe('Finish your 3 in-progress experiences to include them.');
   });
 });
 
