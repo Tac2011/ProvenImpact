@@ -1,4 +1,4 @@
-// Runs four test students through top jobs scoring and the real explanation call, and
+// Runs five test students through top jobs scoring and the real explanation call, and
 // writes a report for Todd and Maggi. Reads the given top jobs tables version (default:
 // the newest, draft or published) and scores with that version's rubric competencies.
 // Signs in as EDUCATION_CHECK_A (in .env.local) to read reference data.
@@ -61,6 +61,24 @@ const STUDENTS: TestStudent[] = [
     ],
     stories: [
       story('Stats for the coaching staff', 'I built a spreadsheet that tracked our shot data and the coaches used it in film sessions', ['execution', 'strong'], ['discipline', 'moderate'], ['analytical', 'moderate']),
+      story('Captain', 'I was voted captain my junior year and ran our team meetings', ['leadership', 'strong'], ['communication', 'moderate']),
+      story('Early morning lifts', 'I lifted at 6 a.m. four days a week for three seasons', ['discipline', 'strong']),
+      story('Position change', 'I switched from point guard to wing in two weeks when we lost a starter', ['adaptability', 'strong']),
+      story('Academic honors', 'I kept a 3.8 GPA while traveling every weekend', ['discipline', 'strong'], ['execution', 'moderate']),
+    ],
+    selfScore: 4,
+    honors: ['Academic All-Conference'],
+    bio: null,
+  },
+  {
+    // Same student as above with one Strong analytical story, to see whether data roles surface.
+    name: 'Business Administration major, Mathematics minor, Strong analytical story (5 experiences)',
+    fields: [
+      { code: '52.02', title: 'Business Administration, Management and Operations', weight: FIELD_WEIGHTS.currentPrimary },
+      { code: '27.01', title: 'Mathematics', weight: 0.6 },
+    ],
+    stories: [
+      story('Serve-receive stats', 'I went through the stats from our last eight matches and found most of our errors came on serve receive right after timeouts. Over the next six matches, our serve-receive errors after timeouts dropped from five to two per match', ['analytical', 'strong'], ['execution', 'moderate']),
       story('Captain', 'I was voted captain my junior year and ran our team meetings', ['leadership', 'strong'], ['communication', 'moderate']),
       story('Early morning lifts', 'I lifted at 6 a.m. four days a week for three seasons', ['discipline', 'strong']),
       story('Position change', 'I switched from point guard to wing in two weeks when we lost a starter', ['adaptability', 'strong']),
