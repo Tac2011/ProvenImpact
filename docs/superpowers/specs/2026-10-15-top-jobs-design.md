@@ -104,7 +104,7 @@ the experience evidence already uses.
 | Data | Source | Used for |
 |---|---|---|
 | Occupations: code, title, description, job zone | O\*NET database (current release), CC BY 4.0 | Cards; candidates limited to job zones 3 to 5 |
-| Work style importance per occupation | O\*NET Work Styles file | What each job needs |
+| Work Styles Impact (WI, -3 to +3) per occupation for 21 work styles (O\*NET 31.0) | O\*NET Work Styles file | What each job needs |
 | CIP to SOC crosswalk | NCES CIP 2020 to SOC 2018 crosswalk | Degree candidates |
 | Median annual wage | BLS Occupational Employment and Wage Statistics, national | Pay |
 | Projected growth | BLS Employment Projections | Outlook wording |
@@ -134,6 +134,8 @@ Kept as versioned JSON files in the repo and loaded with the reference data:
    athlete-type work styles), including roles like Project Management
    Specialists, Information Technology Project Managers, Management Analysts,
    Business Intelligence Analysts, Sales Managers, and operations roles.
+4. **Never suggested:** occupations excluded from every list (Chief
+   Executives, postsecondary teachers), by code or code prefix.
 
 A **review document** (`Proven/Top_Jobs_Tables_v1.md`) shows all three in plain
 language for markup. Changes go back into the JSON files; nothing in code.
@@ -141,8 +143,12 @@ language for markup. Changes go back into the JSON files; nothing in code.
 ### Job needs
 
 For each occupation, its need for each rubric competency (0 to 1) comes from
-its work style importance ratings passed through table 1, then normalized so
-the competencies sum to 1. Computed in the build script and stored.
+its positive Work Styles Impact ratings passed through table 1, normalized so
+the competencies sum to 1. O\*NET rates most jobs as needing a similar mix, so
+each job is then **contrasted with the average job**: only what it needs more
+than average is kept, renormalized to sum 1 (a job exactly like the average
+spreads evenly). Without this, a Project Manager and a Sales Manager look the
+same and strengths can't separate jobs. Computed in the build script and stored.
 
 ### Student strength profile
 
@@ -159,14 +165,15 @@ Each rubric competency gets a strength from 0 to 1:
 
 ### Candidates and degree fit
 
-- **Fields:** every field on `athlete_education` rows: current primary (1.0),
+- **Fields:** every field on `athlete_education` rows: current primary (0.85, so a minor that also
+  leads to the job can add its bonus),
   current secondary (0.6), previous primary (0.8), previous secondary (0.5).
   "Not listed" fields (typed text) have no code and add no candidates.
 - **Degree fit** for an occupation: the highest weight among the student's
   fields that link to it, plus 0.15 for each additional linked field, capped at
   1.0.
 - **Candidates:** every degree-linked occupation (job zone 3 to 5) plus every
-  occupation on the open list (degree fit 0 unless also degree-linked).
+  occupation on the open list (degree fit 0.6, or its linked fit if higher).
 
 ### Score
 
@@ -187,7 +194,9 @@ is one edit, checked by the check script.
 
 - **Strong match:** score 70 or above. **Good match:** 50 to 69. **Possible
   match:** below 50. (Starting thresholds; tuned with the check script report.)
-- **Early results** when fewer than 4 of the 10 are Strong or Good. The note
+  With fewer than 3 counted experiences, Strong match shows as Good match.
+- **Early results** when fewer than 4 of the 10 are Strong or Good, when there
+  are fewer than 3 counted experiences, or when no field of study has a code. The note
   lists what's missing, in this order, at most two:
   - "your field of study" (no coded field)
   - "a few more experiences" (fewer than 5 counted)

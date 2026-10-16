@@ -29,6 +29,20 @@ describe('navItemsFor', () => {
     expect(hrefs('university_user')).toEqual(['/profile', '/assessment']);
   });
 
+  it('adds My Top Jobs after My Experiences when it is available', () => {
+    expect(navItemsFor('student_athlete', { experiences: true, topJobs: true }).map((i) => i.href)).toEqual([
+      '/profile',
+      '/experiences',
+      '/top-jobs',
+      '/assessment',
+    ]);
+    expect(navItemsFor('student_athlete', { experiences: true }).map((i) => i.href)).toEqual([
+      '/profile',
+      '/experiences',
+      '/assessment',
+    ]);
+  });
+
   it('gives a signed-out visitor no items', () => {
     expect(navItemsFor(null)).toEqual([]);
   });

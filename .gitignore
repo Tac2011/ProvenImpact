@@ -43,3 +43,6 @@ next-env.d.ts
 
 # brainstorm and plan scratch files
 .superpowers/
+
+# Downloaded source files for reference data builds
+reference-downloads/
