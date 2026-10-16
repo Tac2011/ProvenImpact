@@ -178,3 +178,52 @@ export function groupNotListed(rows: NotListedRow[]): NotListedGroup[] {
         a.answer.localeCompare(b.answer)
     );
 }
+
+// One row per job in an athlete's latest top 10, from admin_report_top_jobs().
+export interface ReportTopJobRow {
+  athlete_id: string;
+  created_at: string;
+  rank: number;
+  code: string;
+  title: string | null;
+  level: string;
+}
+
+export interface AthleteTopJobs {
+  date: string;
+  jobs: { rank: number; title: string; level: string }[];
+}
+
+const LEVEL_TEXT: Record<string, string> = { strong: 'Strong', good: 'Good', possible: 'Possible' };
+
+export function groupTopJobs(rows: ReportTopJobRow[]): Map<string, AthleteTopJobs> {
+  const byAthlete = new Map<string, AthleteTopJobs>();
+  for (const row of [...rows].sort((a, b) => a.rank - b.rank)) {
+    const entry = byAthlete.get(row.athlete_id) ?? { date: formatReportDate(row.created_at), jobs: [] };
+    entry.jobs.push({ rank: row.rank, title: row.title ?? row.code, level: LEVEL_TEXT[row.level] ?? row.level });
+    byAthlete.set(row.athlete_id, entry);
+  }
+  return byAthlete;
+}
+
+export interface SuggestedJob {
+  code: string;
+  title: string;
+  athletes: string[];
+}
+
+// Jobs across every listed athlete's latest top 10, most athletes first.
+export function mostSuggestedJobs(rows: ReportTopJobRow[], athletes: ReportAthlete[]): SuggestedJob[] {
+  const names = new Map(athletes.map((a) => [a.id, `${a.last_name}, ${a.first_name}`]));
+  const jobs = new Map<string, { title: string; athletes: Set<string> }>();
+  for (const row of rows) {
+    const name = names.get(row.athlete_id);
+    if (!name) continue;
+    const job = jobs.get(row.code) ?? { title: row.title ?? row.code, athletes: new Set<string>() };
+    job.athletes.add(name);
+    jobs.set(row.code, job);
+  }
+  return [...jobs.entries()]
+    .map(([code, j]) => ({ code, title: j.title, athletes: [...j.athletes].sort((a, b) => a.localeCompare(b)) }))
+    .sort((a, b) => b.athletes.length - a.athletes.length || a.title.localeCompare(b.title));
+}
