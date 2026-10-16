@@ -4,8 +4,10 @@ import styleMap from '../../../supabase/reference/top-jobs/style-map.json';
 import selfMap from '../../../supabase/reference/top-jobs/self-map.json';
 import openList from '../../../supabase/reference/top-jobs/open-list.json';
 import excluded from '../../../supabase/reference/top-jobs/excluded.json';
+import styleMapV2 from '../../../supabase/reference/top-jobs/v2/style-map.json';
+import selfMapV2 from '../../../supabase/reference/top-jobs/v2/self-map.json';
+import keysV2 from '../../../supabase/reference/top-jobs/v2/competencies.json';
 
-const RUBRIC_KEYS = ['leadership', 'discipline', 'resilience', 'adaptability', 'communication', 'execution'];
 const WORK_STYLES = [
   'Achievement Orientation', 'Adaptability', 'Attention to Detail', 'Cautiousness', 'Cooperation',
   'Dependability', 'Empathy', 'Humility', 'Initiative', 'Innovation', 'Integrity',
@@ -13,28 +15,40 @@ const WORK_STYLES = [
   'Self-Control', 'Sincerity', 'Social Orientation', 'Stress Tolerance', 'Tolerance for Ambiguity',
 ];
 
-function onlyRubricKeys(map: Record<string, Record<string, number>>) {
-  return Object.values(map).every((entry) =>
-    Object.entries(entry).every(([key, weight]) => RUBRIC_KEYS.includes(key) && weight > 0 && weight <= 1)
-  );
-}
+type WeightMap = Record<string, Record<string, number>>;
 
-describe('approved top jobs tables', () => {
+const VERSIONS: { name: string; styleMap: WeightMap; selfMap: WeightMap; keys: string[] }[] = [
+  { name: 'v1', styleMap, selfMap, keys: ['leadership', 'discipline', 'resilience', 'adaptability', 'communication', 'execution'] },
+  { name: 'v2', styleMap: styleMapV2, selfMap: selfMapV2, keys: keysV2 },
+];
+
+describe.each(VERSIONS)('approved top jobs tables $name', ({ styleMap, selfMap, keys }) => {
+  const onlyKeys = (map: WeightMap) =>
+    Object.values(map).every((entry) => Object.entries(entry).every(([key, w]) => keys.includes(key) && w > 0 && w <= 1));
+
   it('maps every O*NET 31.0 work style, and only those', () => {
     expect(Object.keys(styleMap).sort()).toEqual([...WORK_STYLES].sort());
-    expect(onlyRubricKeys(styleMap)).toBe(true);
+    expect(onlyKeys(styleMap)).toBe(true);
   });
 
   it('maps every self-assessment item, and only those', () => {
     expect(Object.keys(selfMap).sort()).toEqual(COMPETENCIES.map((c) => c.key).sort());
-    expect(onlyRubricKeys(selfMap)).toBe(true);
+    expect(onlyKeys(selfMap)).toBe(true);
   });
 
-  it('gives every rubric competency at least one work style and one self-assessment item', () => {
-    for (const key of RUBRIC_KEYS) {
-      expect(Object.values(styleMap).some((entry) => key in entry)).toBe(true);
-      expect(Object.values(selfMap).some((entry) => key in entry)).toBe(true);
+  it('gives every competency at least one work style and one self-assessment item', () => {
+    for (const key of keys) {
+      expect(Object.values(styleMap).some((e) => key in e)).toBe(true);
+      expect(Object.values(selfMap).some((e) => key in e)).toBe(true);
     }
+  });
+});
+
+describe('approved top jobs lists', () => {
+  it('v2 adds achievement and analytical to the v1 six', () => {
+    expect([...keysV2].sort()).toEqual(
+      ['achievement', 'adaptability', 'analytical', 'communication', 'discipline', 'execution', 'leadership', 'resilience']
+    );
   });
 
   it('has 30 to 40 open-list jobs with O*NET codes, a reason each, and no repeats', () => {
