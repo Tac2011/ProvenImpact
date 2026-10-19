@@ -79,6 +79,7 @@ export default async function AdminReportsPage() {
               <thead className="border-b bg-gray-50 text-gray-600">
                 <tr>
                   <th scope="col" className="px-3 py-2 font-medium">Name</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Email</th>
                   <th scope="col" className="px-3 py-2 font-medium">School</th>
                   <th scope="col" className="px-3 py-2 font-medium">Degree</th>
                   <th scope="col" className="px-3 py-2 font-medium">Field of study</th>
@@ -93,6 +94,7 @@ export default async function AdminReportsPage() {
                     <td className="px-3 py-2 whitespace-nowrap">
                       {a.last_name}, {a.first_name}
                     </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{a.email ?? ''}</td>
                     <td className="px-3 py-2">{schoolText(a)}</td>
                     <td className="px-3 py-2">{degreeText(a)}</td>
                     <td className="px-3 py-2">{fieldText(a)}</td>
@@ -123,6 +125,7 @@ export default async function AdminReportsPage() {
                       {athlete.first_name} {athlete.last_name}
                     </span>
                     <span className="text-sm text-gray-500"> · {athleteSummary(athlete)}</span>
+                    {athlete.email && <div className="text-sm text-gray-500">{athlete.email}</div>}
                   </div>
                   {experiences.length === 0 ? (
                     <p className="mt-2 text-sm text-gray-600">No experiences yet.</p>

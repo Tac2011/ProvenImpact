@@ -23,6 +23,7 @@ export interface ReportAthlete {
   primary_field_other: string | null;
   grad_month: number | null;
   grad_year: number | null;
+  email?: string | null; // missing until the 2026-10-19 report email SQL is run
 }
 
 export interface ReportExperienceRow {

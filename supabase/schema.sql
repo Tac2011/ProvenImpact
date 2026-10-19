@@ -613,6 +613,7 @@ grant execute on function save_profile(jsonb, jsonb, jsonb) to authenticated;
 -- Student athletes for the admin reports, with their current school. Same filter as
 -- admin_dashboard_stats, so the list matches the Athletes tile. Returns no rows for non-admins.
 -- Still returns the old college and degree text for athletes who have not picked yet.
+-- Email comes from auth.users so admins can tell accounts apart.
 
 create function admin_report_athletes()
 returns table (
@@ -632,7 +633,8 @@ returns table (
   primary_field_title  text,
   primary_field_other  text,
   grad_month           smallint,
-  grad_year            smallint
+  grad_year            smallint,
+  email                text
 )
 language sql security definer stable
 set search_path = public
@@ -640,8 +642,9 @@ as $$
   select p.id, p.first_name, p.last_name, p.college, p.degree, p.sport, p.created_at,
          c.name, c.city, c.state::text, e.college_other,
          e.degree_type, e.degree_other, f.title, e.primary_field_other,
-         e.end_month, e.end_year
+         e.end_month, e.end_year, u.email::text
   from profiles p
+  left join auth.users u on u.id = p.id
   left join user_roles r on r.id = p.id
   left join athlete_education e on e.athlete_id = p.id and e.is_current
   left join colleges c on c.id = e.college_id
