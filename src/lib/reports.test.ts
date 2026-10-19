@@ -11,6 +11,7 @@ import {
   groupTopJobs,
   mostSuggestedJobs,
   schoolText,
+  searchAthletes,
   type NotListedRow,
   type ReportAthlete,
   type ReportExperienceRow,
@@ -304,5 +305,40 @@ describe('mostSuggestedJobs', () => {
 
   it('leaves out athletes who are not in the report list', () => {
     expect(mostSuggestedJobs([job('x9', 1, 'A', 'Web Developers')], people)).toEqual([]);
+  });
+});
+
+describe('searchAthletes', () => {
+  const joe = athlete('a1', 'Joe', 'Athlete', { email: 'toddtest3@gmail.com', sport: 'Weightlifting' });
+  const mary = athlete('a2', 'Mary', 'Smith', {
+    email: 'mary@example.com',
+    sport: 'Golf',
+    college_name: 'Creighton University',
+  });
+  const all = [joe, mary];
+
+  it('returns everyone for a blank search', () => {
+    expect(searchAthletes(all, '   ')).toEqual(all);
+  });
+
+  it('matches first name, last name, or full name, ignoring case', () => {
+    expect(searchAthletes(all, 'MARY')).toEqual([mary]);
+    expect(searchAthletes(all, 'athlete')).toEqual([joe]);
+    expect(searchAthletes(all, 'joe athlete')).toEqual([joe]);
+  });
+
+  it('matches email, school, and sport', () => {
+    expect(searchAthletes(all, 'toddtest3')).toEqual([joe]);
+    expect(searchAthletes(all, 'creighton')).toEqual([mary]);
+    expect(searchAthletes(all, 'golf')).toEqual([mary]);
+  });
+
+  it('needs every word to match somewhere', () => {
+    expect(searchAthletes(all, 'mary golf')).toEqual([mary]);
+    expect(searchAthletes(all, 'mary weightlifting')).toEqual([]);
+  });
+
+  it('works when the email column is missing', () => {
+    expect(searchAthletes([athlete('a3', 'Sam', 'Lee')], 'sam')).toHaveLength(1);
   });
 });

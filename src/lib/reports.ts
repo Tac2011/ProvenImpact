@@ -140,6 +140,16 @@ export function athleteSummary(a: ReportAthlete): string {
     .join(' · ');
 }
 
+// Admin athlete search: every word typed must appear in the name, email, school, or sport.
+export function searchAthletes(athletes: ReportAthlete[], query: string): ReportAthlete[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return athletes;
+  return athletes.filter((a) => {
+    const text = [a.first_name, a.last_name, a.email ?? '', schoolText(a), a.sport].join(' ').toLowerCase();
+    return words.every((word) => text.includes(word));
+  });
+}
+
 export interface NotListedRow {
   kind: 'School' | 'Field of study';
   answer: string;
