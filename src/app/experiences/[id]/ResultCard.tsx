@@ -148,7 +148,15 @@ export function ResultCard({
 
       <section>
         <h2 className="text-lg font-semibold">Strengths this shows</h2>
-        {shown.length === 0 ? (
+        {shown.length === 0 && removed.length > 0 ? (
+          <p className="mt-2 text-sm text-gray-600">
+            You removed every item. Add one back below, or{' '}
+            <Link href={`/experiences/${experienceId}/edit`} className="font-medium underline">
+              edit your answers
+            </Link>{' '}
+            to add detail.
+          </p>
+        ) : shown.length === 0 ? (
           <p className="mt-2 text-sm text-gray-600">
             We didn&apos;t find clear evidence for these competencies yet. Adding detail usually
             helps: how often, for how long, what you measured, and what got in the way.{' '}

@@ -32,7 +32,7 @@ export function buildMappingPrompt(
       "You map a college athlete's real experience to employer-relevant competencies, using only the rubric below.",
       "For each competency, decide whether the experience is strong evidence, moderate evidence, or not evidence, following the rubric's own rules. Leave out competencies that are not evidenced. Returning no evidence at all is a valid answer.",
       "For each piece of evidence, copy a short quote word for word from the athlete's answers that shows it (a phrase or sentence from a single answer, not a summary), and give one sentence on why it counts under the rubric. Use the competency key exactly as written in the rubric.",
-      'Also list the concrete behaviors the experience shows, write one resume bullet in past tense that starts with a strong verb, and write one first-person sentence the athlete could say in an interview. Use only facts the athlete gave. Never invent numbers, titles, or results.',
+      'Also list the concrete behaviors the experience shows, write one resume bullet in past tense that starts with a strong verb, and write one short first-person sentence (under 25 words) the athlete could say out loud in an interview. Use only facts the athlete gave. Never invent numbers, titles, or results.',
       DATA_RULE,
       `<rubric>\n${rubricBlock(competencies)}\n</rubric>`,
     ].join('\n\n'),

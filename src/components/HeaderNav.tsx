@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ADMIN_MANAGE_HREF, activeHref, showNavItems, type NavItem } from '@/lib/navigation';
 import { LogoutButton } from './LogoutButton';
 
@@ -21,6 +21,44 @@ export function HeaderNav({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [openedOn, setOpenedOn] = useState(pathname);
+  const headerRef = useRef<HTMLElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+
+  // Close both menus when the page changes.
+  if (openedOn !== pathname) {
+    setOpenedOn(pathname);
+    setMenuOpen(false);
+    setUserOpen(false);
+  }
+
+  // While a menu is open, close it on Escape or a click outside it.
+  useEffect(() => {
+    if (!menuOpen && !userOpen) {
+      return;
+    }
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (!userRef.current?.contains(target)) {
+        setUserOpen(false);
+      }
+      if (!headerRef.current?.contains(target)) {
+        setMenuOpen(false);
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setUserOpen(false);
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen, userOpen]);
 
   const visibleItems = showNavItems(pathname) ? items : [];
   const current = activeHref(pathname, visibleItems);
@@ -55,9 +93,16 @@ export function HeaderNav({
   }
 
   return (
-    <header className="relative bg-brand-slate text-white">
+    <header ref={headerRef} className="relative bg-brand-slate text-white">
       <div className="flex items-center gap-8 px-4 py-3 md:px-6">
-        <Link href={homeHref} className="flex shrink-0 items-center gap-2">
+        <Link
+          href={homeHref}
+          onClick={() => {
+            setMenuOpen(false);
+            setUserOpen(false);
+          }}
+          className="flex shrink-0 items-center gap-2"
+        >
           <span className="rounded bg-white p-1">
             <Image src="/proven-mark.png" alt="" width={26} height={28} priority />
           </span>
@@ -76,6 +121,7 @@ export function HeaderNav({
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
+              aria-expanded={menuOpen}
               className="text-sm font-semibold tracking-wide text-slate-300 uppercase md:hidden"
             >
               Menu
@@ -83,10 +129,11 @@ export function HeaderNav({
           )}
 
           {displayName ? (
-            <div className="relative">
+            <div ref={userRef} className="relative">
               <button
                 type="button"
                 onClick={() => setUserOpen(!userOpen)}
+                aria-expanded={userOpen}
                 className="max-w-[10rem] truncate text-sm text-slate-300 hover:text-white md:max-w-[16rem]"
               >
                 {displayName} &#9662;
