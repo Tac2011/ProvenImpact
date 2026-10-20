@@ -104,11 +104,11 @@ export function HeaderNav({
           className="flex shrink-0 items-center gap-2"
         >
           <span className="rounded bg-white p-1">
-            <Image src="/proven-mark.png" alt="" width={26} height={28} priority />
+            <Image src="/proven-collective-mark.png" alt="" width={36} height={28} priority />
           </span>
           <span className="text-sm leading-tight font-extrabold tracking-[0.2em]">
             PROVEN
-            <span className="block text-[#ff5a6e]">IMPACT</span>
+            <span className="block text-[#0673f6]">COLLECTIVE</span>
           </span>
         </Link>
 

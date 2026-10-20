@@ -17,14 +17,14 @@ export default async function Home() {
 
   return (
     <main className="flex flex-col items-center px-6 py-24 text-center">
-      <Image src="/ProvenImpact.png" alt="Proven Impact" width={160} height={160} priority />
+      <Image src="/ProvenCollective.png" alt="Proven Collective" width={280} height={241} priority />
 
       <h1 className="mt-8 text-4xl font-bold tracking-tight text-balance sm:text-5xl">
         Athletic Experience, Real Opportunity
       </h1>
 
       <p className="mt-4 max-w-xl text-lg text-gray-600">
-        Proven Impact translates what you&apos;ve already demonstrated in
+        Proven Collective translates what you&apos;ve already demonstrated in
         competition into evidence employers understand, turning your
         athletic career into a career advantage.
       </p>
